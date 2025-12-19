@@ -1,78 +1,83 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Space Builder Multiplayer</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
-  </head>
-  <body>
-    
-    <a-scene>
-      
-      <a-assets>
-        <a-mixin id="dome" geometry="primitive: sphere; thetaLength: 90" material="color: white; opacity: 0.8; side: double" scale="2 2 2"></a-mixin>
-        <a-mixin id="bed" geometry="primitive: box; depth: 2; height: 0.5; width: 1" material="color: gray"></a-mixin>
-        <a-mixin id="flag" geometry="primitive: cylinder; height: 3; radius: 0.05" material="color: silver"></a-mixin>
-      </a-assets>
-
-      <a-entity environment="preset: mars; skyType: atmosphere; lighting: point"></a-entity>
-
-      <a-entity id="astronaut" position="0 1.6 0" wasd-controls look-controls>
-        <a-entity camera position="0 0 0">
-           <a-entity cursor="fuse: false; fuseTimeout: 500"
-                position="0 0 -1"
-                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-                material="color: cyan; shader: flat">
-           </a-entity>
-           <a-text value="O2: 100%" position="-1 0.7 -1" scale="0.5 0.5 0.5" color="white"></a-text>
-        </a-entity>
-      </a-entity>
-
-      <a-plane position="0 0.1 0" rotation="-90 0 0" width="100" height="100" color="red" opacity="0.001" class="ground"></a-plane>
-
-    </a-scene>
-
-    <script>
-      // 1. Select the ground
-      var ground = document.querySelector('.ground');
-      var scene = document.querySelector('a-scene');
-      
-      // 2. Variable to track what we are building
-      var currentBuildItem = 'dome'; // Default item
-
-      // 3. Listen for a click on the ground
-      ground.addEventListener('click', function (evt) {
+<head>
+    <title>Space Builder Online</title>
+    <style>
+        body { background-color: #1a1a2e; color: white; font-family: Courier, monospace; margin: 0; display: flex; height: 100vh; }
         
-        // Create a new 3D entity
-        var newItem = document.createElement('a-entity');
-        
-        // Set its position to where you clicked
-        newItem.setAttribute('position', evt.detail.intersection.point);
-        
-        // Apply the shape based on your notes
-        newItem.setAttribute('mixin', currentBuildItem);
+        /* SIDEBAR (Parts List) */
+        #sidebar { width: 250px; background: #16213e; border-right: 2px solid #0f3460; padding: 10px; display: flex; flex-direction: column; }
+        .part-btn { 
+            background: #0f3460; color: white; border: 1px solid white; 
+            padding: 15px; margin-bottom: 10px; cursor: pointer; text-align: left;
+            transition: 0.2s;
+        }
+        .part-btn:hover { background: #533483; }
+        .part-stats { font-size: 10px; color: #ccc; }
 
-        // Add the Flag top if it is a flag
-        if(currentBuildItem === 'flag') {
-            var flagTop = document.createElement('a-box');
-            flagTop.setAttribute('color', 'red');
-            flagTop.setAttribute('position', '0 1.5 0.5');
-            flagTop.setAttribute('scale', '0.1 0.5 0.8');
-            newItem.appendChild(flagTop);
+        /* BUILD GRID (Where you stack rocket) */
+        #blueprint-area { flex-grow: 1; position: relative; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 20px 20px; overflow: hidden; }
+        
+        /* ROCKET PARTS ON GRID */
+        .placed-part {
+            width: 100px; position: absolute; left: 50%; transform: translateX(-50%);
+            border: 2px solid white; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: black;
         }
 
-        // Add it to the world
-        scene.appendChild(newItem);
-        console.log("Built a " + currentBuildItem);
-      });
+        /* UI OVERLAY */
+        #ui-layer { position: absolute; top: 10px; right: 10px; text-align: right; }
+        button#launch-btn { background: #e94560; color: white; font-size: 20px; padding: 10px 30px; border: none; cursor: pointer; font-weight: bold; }
+        
+        /* STATS PANEL */
+        #ship-stats { margin-top: 20px; border-top: 1px solid grey; padding-top: 10px; }
+    </style>
+</head>
+<body>
 
-      // 4. Keyboard shortcuts to switch items (1, 2, 3)
-      window.addEventListener('keydown', function(e){
-        if(e.key === '1') { currentBuildItem = 'dome'; alert("Selected: Dome"); }
-        if(e.key === '2') { currentBuildItem = 'bed'; alert("Selected: Bed"); }
-        if(e.key === '3') { currentBuildItem = 'flag'; alert("Selected: Flag"); }
-      });
+    <div id="sidebar">
+        <h3>ROCKET PARTS</h3>
+        <div class="part-btn" onclick="addPart('capsule')">
+            COMMAND CAPSULE
+            <div class="part-stats">Crew: 3 | O2: 100%</div>
+        </div>
+        <div class="part-btn" onclick="addPart('fuel_small')">
+            SMALL FUEL TANK
+            <div class="part-stats">Fuel: 500L | Mass: 2t</div>
+        </div>
+        <div class="part-btn" onclick="addPart('booster')">
+            MAIN BOOSTER
+            <div class="part-stats">Thrust: 45 | Fuel: -5/s</div>
+        </div>
+        <div class="part-btn" onclick="addPart('solar')">
+            SOLAR PANEL
+            <div class="part-stats">Power Gen: +2/s</div>
+        </div>
 
-    </script>
-  </body>
-</html>
+        <div id="ship-stats">
+            <h4>SHIP STATS</h4>
+            <p>Astronauts: <span id="crew-count">0</span>/3</p>
+            <p>Oxygen: <span id="o2-stat">0</span></p>
+            <p>Mass: <span id="mass-stat">0</span> tons</p>
+            <p>Height: <span id="height-stat">0</span> m</p>
+        </div>
+    </div>
+
+    <div id="blueprint-area">
+        </div>
+
+    <div id="ui-layer">
+        <button id="launch-btn" onclick="launchRocket()">LAUNCH ROCKET</button>
+        <p>Server Status: <span style="color:green">Online</span></p>
+    </div>
+
+    <script>
+        let rocketParts = [];
+        let totalMass = 0;
+        let totalCrew = 0;
+        let totalO2 = 0;
+        let currentHeight = 50; // Start at bottom of screen
+
+        // DEFINITION OF PARTS (Data from your notes)
+        const partsData = {
+            'capsule': { h: 60, color: '#bdc3c7
