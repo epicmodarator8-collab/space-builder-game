@@ -1,83 +1,189 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder Online</title>
+    <title>Space Builder: The Singularity</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { background-color: #1a1a2e; color: white; font-family: Courier, monospace; margin: 0; display: flex; height: 100vh; }
-        
-        /* SIDEBAR (Parts List) */
-        #sidebar { width: 250px; background: #16213e; border-right: 2px solid #0f3460; padding: 10px; display: flex; flex-direction: column; }
-        .part-btn { 
-            background: #0f3460; color: white; border: 1px solid white; 
-            padding: 15px; margin-bottom: 10px; cursor: pointer; text-align: left;
-            transition: 0.2s;
-        }
-        .part-btn:hover { background: #533483; }
-        .part-stats { font-size: 10px; color: #ccc; }
+        body { font-family: 'Courier New', monospace; margin: 0; overflow: hidden; background: black; color: lime; }
+        #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; }
+        #parts-menu { height: 35%; overflow-y: scroll; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 10px; background: #111; border-top: 2px solid #333; }
+        .part-btn { background: #222; color: white; border: 1px solid #444; padding: 12px; font-size: 11px; text-align: center; }
+        #blueprint-area { flex-grow: 1; position: relative; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px; }
+        .placed-part { width: 60px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid white; color: black; font-weight: bold; font-size: 8px; text-align: center; }
 
-        /* BUILD GRID (Where you stack rocket) */
-        #blueprint-area { flex-grow: 1; position: relative; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 20px 20px; overflow: hidden; }
-        
-        /* ROCKET PARTS ON GRID */
-        .placed-part {
-            width: 100px; position: absolute; left: 50%; transform: translateX(-50%);
-            border: 2px solid white; display: flex; align-items: center; justify-content: center;
-            font-weight: bold; color: black;
-        }
+        #mobile-hud { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .control-btn { pointer-events: auto; width: 65px; height: 65px; background: rgba(255,255,255,0.1); border: 1px solid white; color: white; border-radius: 50%; font-size: 9px; }
+        #thrust-btn { position: absolute; right: 20px; bottom: 20px; background: rgba(0,255,0,0.2); }
+        #rover-btn { position: absolute; left: 20px; bottom: 100px; border-color: orange; color: orange; }
+        #collect-btn { position: absolute; left: 100px; bottom: 20px; border-color: #7FFF00; color: #7FFF00; }
 
-        /* UI OVERLAY */
-        #ui-layer { position: absolute; top: 10px; right: 10px; text-align: right; }
-        button#launch-btn { background: #e94560; color: white; font-size: 20px; padding: 10px 30px; border: none; cursor: pointer; font-weight: bold; }
-        
-        /* STATS PANEL */
-        #ship-stats { margin-top: 20px; border-top: 1px solid grey; padding-top: 10px; }
+        #crew-stats { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 8px; border: 1px solid #444; font-size: 10px; }
+        .o2-bar { width: 80px; height: 4px; background: #222; margin-top: 2px; }
+        .o2-f { height: 100%; background: cyan; width: 100%; }
+        #mission-log { position: absolute; top: 10px; right: 10px; background: black; padding: 5px; border: 1px solid lime; font-size: 9px; }
     </style>
 </head>
 <body>
 
-    <div id="sidebar">
-        <h3>ROCKET PARTS</h3>
-        <div class="part-btn" onclick="addPart('capsule')">
-            COMMAND CAPSULE
-            <div class="part-stats">Crew: 3 | O2: 100%</div>
+    <div id="build-screen">
+        <div id="blueprint-area">
+            <div style="padding: 15px;">
+                <h2 style="color:cyan">VOID CONSTRUCTOR</h2>
+                <p>O2 Reserves: <span id="o2-total">0</span>s</p>
+                <p>Samples: <span id="sample-count">0</span></p>
+                <button onclick="launch()" style="background:white; color:black; border:none; padding:10px; width:100%; font-weight:bold;">IGNITION</button>
+            </div>
         </div>
-        <div class="part-btn" onclick="addPart('fuel_small')">
-            SMALL FUEL TANK
-            <div class="part-stats">Fuel: 500L | Mass: 2t</div>
-        </div>
-        <div class="part-btn" onclick="addPart('booster')">
-            MAIN BOOSTER
-            <div class="part-stats">Thrust: 45 | Fuel: -5/s</div>
-        </div>
-        <div class="part-btn" onclick="addPart('solar')">
-            SOLAR PANEL
-            <div class="part-stats">Power Gen: +2/s</div>
-        </div>
-
-        <div id="ship-stats">
-            <h4>SHIP STATS</h4>
-            <p>Astronauts: <span id="crew-count">0</span>/3</p>
-            <p>Oxygen: <span id="o2-stat">0</span></p>
-            <p>Mass: <span id="mass-stat">0</span> tons</p>
-            <p>Height: <span id="height-stat">0</span> m</p>
+        <div id="parts-menu">
+            <div class="part-btn" onclick="addPart('capsule')">CAPSULE</div>
+            <div class="part-btn" onclick="addPart('fuel')">FUEL</div>
+            <div class="part-btn" onclick="addPart('engine')">ENGINE</div>
+            <div class="part-btn" onclick="addPart('oxygen')">O2 TANK</div>
+            <div class="part-btn" onclick="addPart('rover')">ROVER BAY</div>
         </div>
     </div>
 
-    <div id="blueprint-area">
+    <div id="mobile-hud">
+        <div id="crew-stats">
+            A1 <div class="o2-bar"><div id="o2-1" class="o2-f"></div></div>
+            A2 <div class="o2-bar"><div id="o2-2" class="o2-f"></div></div>
+            A3 <div class="o2-bar"><div id="o2-3" class="o2-f"></div></div>
         </div>
-
-    <div id="ui-layer">
-        <button id="launch-btn" onclick="launchRocket()">LAUNCH ROCKET</button>
-        <p>Server Status: <span style="color:green">Online</span></p>
+        <div id="mission-log">RADAR: <span id="dist-info">STABLE</span></div>
+        <button id="thrust-btn" class="control-btn">FIRE</button>
+        <button id="rover-btn" class="control-btn" onclick="deployRover()">ROVER</button>
+        <button id="collect-btn" class="control-btn" onclick="collectSample()">SAMPLE</button>
     </div>
+
+    <a-scene id="game-scene" style="display:none">
+        <a-assets>
+            <a-mixin id="m-capsule" geometry="primitive: cone; radiusBottom: 0.8; height: 1.5" material="color: #fff"></a-mixin>
+            <a-mixin id="m-fuel" geometry="primitive: cylinder; radius: 0.8; height: 2" material="color: #666"></a-mixin>
+            <a-mixin id="m-engine" geometry="primitive: cone; radiusBottom: 1; height: 0.8" material="color: #111"></a-mixin>
+            <a-mixin id="m-oxygen" geometry="primitive: cylinder; radius: 0.5; height: 1" material="color: cyan"></a-mixin>
+            <a-mixin id="m-rover" geometry="primitive: box; width: 1.2; height: 0.5; depth: 1.2" material="color: orange"></a-mixin>
+            <a-mixin id="m-bac" geometry="primitive: box; width: 0.1; height: 0.1; depth: 0.1" material="color: #7FFF00"></a-mixin>
+        </a-assets>
+
+        <a-entity id="blackhole" position="0 0 -2000">
+            <a-sphere radius="40" material="color: black"></a-sphere>
+            <a-ring radius-inner="45" radius-outer="80" rotation="-90 0 0" material="color: #331144; opacity: 0.8; shader: flat"></a-ring>
+        </a-entity>
+
+        <a-entity id="whitehole" position="0 0 2000">
+            <a-sphere radius="40" material="color: white; shader: flat"></a-sphere>
+            <a-ring radius-inner="45" radius-outer="100" rotation="-90 0 0" material="color: #ffffff; opacity: 0.3; shader: flat"></a-ring>
+        </a-entity>
+
+        <a-entity id="mars" position="0 0 -400">
+            <a-sphere radius="50" color="#ff4400"></a-sphere>
+            <a-sphere position="0 -49.5 0" radius="15" scale="1 0.1 1" color="white">
+                <a-entity class="bact" mixin="m-bac" position="2 0.5 2"></a-entity>
+                <a-entity class="bact" mixin="m-bac" position="-3 0.5 1"></a-entity>
+                <a-entity class="bact" mixin="m-bac" position="0 0.5 -4"></a-entity>
+            </a-sphere>
+        </a-entity>
+
+        <a-sky color="#000"></a-sky>
+        <a-entity id="rocket-group" position="0 5 0"></a-entity>
+        <a-entity id="rover-unit" mixin="m-rover" position="0 -100 0" visible="false"></a-entity>
+        <a-entity id="camera-rig" position="0 10 25"><a-camera look-controls></a-camera></a-entity>
+    </a-scene>
 
     <script>
-        let rocketParts = [];
-        let totalMass = 0;
-        let totalCrew = 0;
-        let totalO2 = 0;
-        let currentHeight = 50; // Start at bottom of screen
+        let parts = [];
+        let o2Val = 0;
+        let samples = 0;
+        let currentH = 20;
 
-        // DEFINITION OF PARTS (Data from your notes)
-        const partsData = {
-            'capsule': { h: 60, color: '#bdc3c7
+        function addPart(t) {
+            let p = {capsule:40, fuel:60, engine:30, oxygen:25, rover:40}[t];
+            let color = {capsule:'white', fuel:'#666', engine:'#111', oxygen:'cyan', rover:'orange'}[t];
+            let el = document.createElement('div');
+            el.className = 'placed-part'; el.style.height = p+'px'; el.style.backgroundColor = color;
+            el.style.bottom = currentH+'px'; el.innerText = t;
+            document.getElementById('blueprint-area').appendChild(el);
+            currentH += p;
+            if(t === 'oxygen') o2Val += 100;
+            parts.push(t);
+            document.getElementById('o2-total').innerText = o2Val;
+        }
+
+        let isFlying = false;
+        let pos = {y: 5, z: 0};
+        let vel = 0;
+        let thrusting = false;
+        let astroO2 = [0, 0, 0];
+
+        function launch() {
+            if(parts.length < 2) return;
+            astroO2 = [o2Val, o2Val, o2Val];
+            document.getElementById('build-screen').style.display = 'none';
+            document.getElementById('game-scene').style.display = 'block';
+            document.getElementById('mobile-hud').style.display = 'block';
+            
+            let group = document.getElementById('rocket-group');
+            let currY = 0;
+            parts.forEach(t => {
+                let ent = document.createElement('a-entity');
+                ent.setAttribute('mixin', 'm-'+t);
+                ent.setAttribute('position', `0 ${currY} 0`);
+                group.appendChild(ent);
+                currY += 1.5;
+            });
+            isFlying = true;
+            loop();
+        }
+
+        function deployRover() {
+            if(parts.indexOf('rover') === -1) return;
+            let rover = document.getElementById('rover-unit');
+            rover.setAttribute('position', `0 ${pos.y - 5} ${pos.z}`);
+            rover.setAttribute('visible', 'true');
+        }
+
+        function collectSample() {
+            // If near Mars pole, collect bacteria
+            if(pos.z < -350 && pos.z > -450 && pos.y < -30) {
+                samples++;
+                document.getElementById('sample-count').innerText = samples;
+                document.getElementById('dist-info').innerText = "BACTERIA COLLECTED!";
+            }
+        }
+
+        function loop() {
+            if(!isFlying) return;
+            
+            // Gravity and Thrust
+            if(thrusting) vel += 0.08; else vel -= 0.03;
+            pos.y += vel;
+            
+            // SINGULARITY PHYSICS
+            // Pull toward Black Hole (-2000)
+            if(pos.z > -1900) pos.z -= 0.5; 
+            // Push away from White Hole (+2000)
+            if(pos.z > 1500) pos.z += 2.0;
+
+            // Astronaut O2
+            for(let i=0; i<3; i++) {
+                if(astroO2[i] > 0) {
+                    astroO2[i] -= 0.05;
+                    document.getElementById('o2-'+(i+1)).style.width = (astroO2[i]/o2Val*100) + "%";
+                }
+            }
+
+            document.getElementById('rocket-group').setAttribute('position', `0 ${pos.y} ${pos.z}`);
+            document.getElementById('camera-rig').setAttribute('position', `0 ${pos.y+5} ${pos.z+25}`);
+            document.getElementById('dist-info').innerText = "Z-POS: " + Math.floor(pos.z);
+            
+            requestAnimationFrame(loop);
+        }
+
+        const tBtn = document.getElementById('thrust-btn');
+        tBtn.addEventListener('touchstart', () => thrusting = true);
+        tBtn.addEventListener('touchend', () => thrusting = false);
+    </script>
+</body>
+</html>
