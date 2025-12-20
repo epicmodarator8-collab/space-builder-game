@@ -18,6 +18,15 @@
         }
 
         #menu-container { height: 60%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
+        
+        /* TOP LAUNCH BUTTON STYLE */
+        .top-launch-btn { 
+            background: #00ff00; color: #000; padding: 15px; font-weight: bold; 
+            cursor: pointer; border: none; font-size: 18px; text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.4); z-index: 10;
+        }
+        .top-launch-btn:hover { background: #00cc00; }
+
         .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 16px; text-transform: uppercase; }
         
         #parts-grid { 
@@ -34,25 +43,21 @@
             display: flex; align-items: center; justify-content: center; text-align: center;
         }
 
-        /* --- UPDATED TEXTURES --- */
-        .tex-capsule { 
-            background: radial-gradient(circle at 50% 30%, #add8e6 10%, transparent 12%), linear-gradient(to right, transparent 35%, #222 35%, #222 65%, transparent 65%), linear-gradient(90deg, #888 0%, #eee 50%, #888 100%) !important; 
-            background-size: 100% 100%, 100% 60%, 100% 100% !important; background-repeat: no-repeat !important; background-position: center bottom !important; border-radius: 40% 40% 5px 5px !important;
-        }
-        .tex-fabric { background: repeating-linear-gradient(90deg, #fff, #fff 15px, #d00 15px, #d00 30px) !important; border-radius: 50% 50% 5px 5px !important; }
-        .tex-fuel { background: repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 12px), linear-gradient(90deg, #cc7a00, #ff9900, #cc7a00) !important; }
-        .tex-metal { background: linear-gradient(90deg, #333 0%, #666 50%, #333 100%) !important; border-bottom: 4px solid #444 !important; }
-        .tex-tech { background: #001a1a; border: 2px solid #00ffff !important; box-shadow: inset 0 0 10px #00ffff; background-image: radial-gradient(#00ffff 1px, transparent 1px) !important; background-size: 8px 8px !important; }
-        .tex-heat { background: conic-gradient(from 0deg at 50% 50%, #111 25%, #222 0 50%, #111 0 75%, #222 0) !important; background-size: 6px 6px !important; }
+        /* TEXTURES FROM SCREENSHOTS */
+        .tex-capsule { background: linear-gradient(to bottom, #ddd, #999) !important; border: 3px solid #0f0 !important; border-radius: 40% 40% 5px 5px !important; }
+        .tex-tech { background: #001a1a; border: 2px solid #00ffff !important; box-shadow: inset 0 0 15px #00ffff; background-image: radial-gradient(#00ffff 1px, transparent 1px) !important; background-size: 6px 6px !important; }
+        .tex-fuel { background: linear-gradient(90deg, #cc7a00, #ff9900, #cc7a00) !important; border: 2px solid #0f0 !important;}
+        .tex-metal { background: linear-gradient(90deg, #333, #777, #333) !important; border: 2px solid #0f0 !important;}
+        .tex-heat { background: #222 !important; border: 2px solid #0f0 !important;}
+        .tex-fabric { background: repeating-linear-gradient(45deg, #fff, #fff 10px, #d00 10px, #d00 20px) !important; border: 2px solid #0f0 !important;}
 
         #sticky-bottom { display: flex; flex-direction: column; }
-        .undo-btn { background: #600; color: white; padding: 15px; font-weight: bold; cursor: pointer; text-align: center; border:none; }
-        .launch-btn { background: #008000; padding: 20px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; }
+        .undo-btn { background: #600; color: white; padding: 15px; font-weight: bold; cursor: pointer; text-align: center; border:none; text-transform: uppercase;}
         
         #return-btn { position: absolute; bottom: 20px; right: 20px; padding: 15px; background: #222; color: #0f0; border: 2px solid #0f0; font-weight: bold; cursor: pointer; display: none; z-index: 200; }
 
         #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 22px; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none; }
-        .placed-part { width: 140px; margin: 0 auto; color: black; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.2); }
+        .placed-part { width: 140px; margin: 0 auto; color: white; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); }
     </style>
 </head>
 <body>
@@ -62,12 +67,13 @@
         <div id="blueprint-area"><div id="rocket-container" style="display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 20px;"></div></div>
         
         <div id="menu-container">
+            <button class="top-launch-btn" onclick="launch()">🚀 INITIALIZE LAUNCH SEQUENCE</button>
+            
             <button class="scroll-nav" onclick="scrollParts(-1)">▲ SCROLL UP</button>
             <div id="parts-grid"></div>
             <button class="scroll-nav" onclick="scrollParts(1)">▼ SCROLL DOWN</button>
             <div id="sticky-bottom">
                 <button class="undo-btn" onclick="undo()">⚠ DELETE LAST PART</button>
-                <button class="launch-btn" onclick="launch()">INITIALIZE LAUNCH</button>
             </div>
         </div>
     </div>
@@ -75,14 +81,17 @@
     <button id="return-btn" onclick="resetBuilder()">RESET BUILDER</button>
 
     <a-scene id="game-scene" style="display:none">
-        <a-sky color="#050505"></a-sky>
+        <a-sky color="#000"></a-sky>
+        <a-entity id="stars"></a-entity>
+
         <a-entity id="rocket-group">
             <a-entity id="visual-stack"></a-entity>
-            <a-entity id="fire" position="0 -1 0" visible="false">
-                <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2"></a-cone>
-                <a-cone color="#ffd700" radius-bottom="0.4" radius-top="0.05" height="1.5" position="0 0.2 0"></a-cone>
+            <a-entity id="fire" position="0 -1.8 0" visible="false">
+                <a-cone color="#ff4500" radius-bottom="0.9" radius-top="0.1" height="3" opacity="0.8"></a-cone>
+                <a-cone color="#ffd700" radius-bottom="0.5" radius-top="0.05" height="2" position="0 0.2 0"></a-cone>
             </a-entity>
         </a-entity>
+        
         <a-camera position="0 5 15"></a-camera>
     </a-scene>
 
@@ -118,26 +127,20 @@
         }
 
         function scrollParts(dir) {
-            currentPage = Math.max(0, Math.min(PART_PAGES.length - 1, currentPage + dir));
+            currentPage = (currentPage + dir + PART_PAGES.length) % PART_PAGES.length;
             renderParts();
         }
 
         function addPart(name, cost, tex) {
-            if (cash < cost) {
-                document.getElementById('budget-display').style.color = 'red';
-                setTimeout(() => document.getElementById('budget-display').style.color = '#0f0', 500);
-                return;
-            }
+            if (cash < cost) return;
             cash -= cost;
             const container = document.getElementById('rocket-container');
             const el = document.createElement('div');
             el.className = 'placed-part ' + tex;
             el.id = 'part-' + stack.length;
-            
-            let hVal = (name.includes('Shield') || name.includes('Decoupler')) ? 25 : 65;
+            let hVal = (name.includes('Shield') || name.includes('Decoupler')) ? 30 : 70;
             el.style.height = hVal + 'px';
             el.innerText = name.toUpperCase();
-            
             container.appendChild(el);
             document.getElementById('cash').innerText = cash;
             stack.push({ name, cost, tex, hVal: hVal / 25 });
@@ -160,18 +163,24 @@
             
             const v = document.getElementById('visual-stack');
             const group = document.getElementById('rocket-group');
+            const stars = document.getElementById('stars');
             v.innerHTML = '';
-            group.setAttribute('position', '0 0 0');
             
+            // Generate Stars
+            for(let i=0; i<150; i++) {
+                let s = document.createElement('a-sphere');
+                s.setAttribute('radius', '0.06');
+                s.setAttribute('color', '#FFF');
+                s.setAttribute('position', `${(Math.random()-0.5)*50} ${(Math.random()-0.5)*150} ${(Math.random()-0.5)*50}`);
+                stars.appendChild(s);
+            }
+
             let currentHeight = 0;
             stack.forEach((p) => {
                 const e = document.createElement('a-entity');
                 let shape = p.name === 'Capsule' ? 'cone' : 'cylinder';
                 let h = p.hVal;
-                
-                e.setAttribute('geometry', {
-                    primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone' ? 0 : 1.2), height: h
-                });
+                e.setAttribute('geometry', { primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone' ? 0 : 1.2), height: h });
                 
                 let color = "#fff";
                 if(p.tex === 'tex-fuel') color = "#ff9900";
@@ -179,28 +188,21 @@
                 if(p.tex === 'tex-tech') color = "#00ffff";
                 if(p.tex === 'tex-metal') color = "#555";
                 
-                e.setAttribute('material', {color: color, metalness: 0.6, roughness: 0.4});
+                e.setAttribute('material', {color: color, metalness: 0.8, roughness: 0.2});
                 e.setAttribute('position', `0 ${currentHeight + (h / 2)} 0`);
                 currentHeight += h;
                 v.appendChild(e);
             });
 
-            // Start Animation
+            // Start Animation sequence
             setTimeout(() => {
                 document.getElementById('fire').setAttribute('visible', 'true');
-                group.setAttribute('animation', {
-                    property: 'position',
-                    to: '0 100 0',
-                    dur: 10000,
-                    easing: 'easeInQuad'
-                });
+                group.setAttribute('animation', { property: 'position', to: '0 80 0', dur: 10000, easing: 'easeInQuad' });
+                stars.setAttribute('animation', { property: 'position', to: '0 -150 0', dur: 10000, easing: 'easeInQuad' });
             }, 1000);
         }
 
-        function resetBuilder() {
-            location.reload();
-        }
-
+        function resetBuilder() { location.reload(); }
         window.onload = renderParts;
     </script>
 </body>
