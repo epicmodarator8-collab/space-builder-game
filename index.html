@@ -19,67 +19,39 @@
 
         #menu-container { height: 60%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
         .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 16px; text-transform: uppercase; }
-        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; align-content: center; }
+        
+        /* Fixed Grid: Ensures buttons are always visible */
+        #parts-grid { 
+            flex-grow: 1; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+            padding: 15px; 
+            overflow-y: auto;
+        }
         
         .part-btn { 
-            background: #16213e; color: white; border: 2px solid #00ff00; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; height: 100px;
+            background: #16213e; color: white; border: 2px solid #00ff00; font-size: 13px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 80px;
             display: flex; align-items: center; justify-content: center; text-align: center;
         }
 
-        /* --- ADVANCED TEXTURES --- */
-        
-        /* CAPSULE: Shiny Metal + Hatch/Door + Window */
+        /* --- UPDATED TEXTURES --- */
         .tex-capsule { 
-            background: 
-                radial-gradient(circle at 50% 30%, #add8e6 10%, transparent 12%), /* Window */
-                linear-gradient(to right, transparent 35%, #222 35%, #222 65%, transparent 65%), /* Hatch Door */
-                linear-gradient(90deg, #888 0%, #eee 50%, #888 100%) !important; 
-            background-size: 100% 100%, 100% 60%, 100% 100% !important;
-            background-repeat: no-repeat !important;
-            background-position: center bottom !important;
-            border-radius: 50% 50% 5px 5px !important;
+            background: radial-gradient(circle at 50% 30%, #add8e6 10%, transparent 12%), linear-gradient(to right, transparent 35%, #222 35%, #222 65%, transparent 65%), linear-gradient(90deg, #888 0%, #eee 50%, #888 100%) !important; 
+            background-size: 100% 100%, 100% 60%, 100% 100% !important; background-repeat: no-repeat !important; background-position: center bottom !important; border-radius: 40% 40% 5px 5px !important;
         }
 
-        /* PARACHUTE: Red and White Stripes */
-        .tex-fabric { 
-            background: repeating-linear-gradient(90deg, #fff, #fff 20px, #d00 20px, #d00 40px) !important;
-            border-radius: 60% 60% 10px 10px !important;
-        }
-
-        /* FUEL TANK: Industrial Orange with Ridges */
-        .tex-fuel { 
-            background: 
-                repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 12px),
-                linear-gradient(90deg, #cc7a00, #ff9900, #cc7a00) !important; 
-        }
-
-        /* BOOSTER: Dark Metal with Nozzle Look */
-        .tex-metal { 
-            background: linear-gradient(90deg, #333 0%, #666 50%, #333 100%) !important;
-            border-bottom: 5px solid #555 !important;
-        }
-
-        /* TECH/O2: Glowing Blue Lines */
-        .tex-tech { 
-            background: #001a1a; 
-            border: 2px solid #00ffff !important; 
-            box-shadow: inset 0 0 15px #00ffff;
-            background-image: radial-gradient(#00ffff 1px, transparent 1px) !important;
-            background-size: 10px 10px !important;
-        }
-
-        /* HEAT SHIELD: Carbon Fiber/Tile Look */
-        .tex-heat { 
-            background: 
-                conic-gradient(from 0deg at 50% 50%, #111 25%, #222 0 50%, #111 0 75%, #222 0) !important;
-            background-size: 8px 8px !important;
-        }
+        .tex-fabric { background: repeating-linear-gradient(90deg, #fff, #fff 15px, #d00 15px, #d00 30px) !important; border-radius: 50% 50% 5px 5px !important; }
+        .tex-fuel { background: repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 12px), linear-gradient(90deg, #cc7a00, #ff9900, #cc7a00) !important; }
+        .tex-metal { background: linear-gradient(90deg, #333 0%, #666 50%, #333 100%) !important; border-bottom: 4px solid #444 !important; }
+        .tex-tech { background: #001a1a; border: 2px solid #00ffff !important; box-shadow: inset 0 0 10px #00ffff; background-image: radial-gradient(#00ffff 1px, transparent 1px) !important; background-size: 8px 8px !important; }
+        .tex-heat { background: conic-gradient(from 0deg at 50% 50%, #111 25%, #222 0 50%, #111 0 75%, #222 0) !important; background-size: 6px 6px !important; }
 
         #sticky-bottom { display: flex; flex-direction: column; }
-        .undo-btn { background: #600; color: white; padding: 18px; font-weight: bold; cursor: pointer; text-align: center; font-size: 16px; border:none; }
-        .launch-btn { background: #008000; padding: 25px; border: none; font-size: 20px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; }
+        .undo-btn { background: #600; color: white; padding: 15px; font-weight: bold; cursor: pointer; text-align: center; border:none; }
+        .launch-btn { background: #008000; padding: 20px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; }
 
-        #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 24px; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none; }
+        #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 22px; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none; }
         .placed-part { width: 140px; margin: 0 auto; color: black; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.2); }
     </style>
 </head>
@@ -103,35 +75,34 @@
     <a-scene id="game-scene" style="display:none">
         <a-sky color="#050505"></a-sky>
         <a-entity id="visual-stack"></a-entity>
-        <a-camera position="0 5 20"></a-camera>
+        <a-camera position="0 5 15"></a-camera>
     </a-scene>
 
     <script>
-        // Use the ordered pairs as requested
-        const PART_PAIRS = [
-            [{name: 'Capsule', cost: 200, tex: 'tex-capsule'}, {name: 'Parachute', cost: 400, tex: 'tex-fabric'}],
-            [{name: 'RCS', cost: 150, tex: 'tex-tech'}, {name: 'Heat Shield', cost: 500, tex: 'tex-heat'}],
-            [{name: 'O2 Tank', cost: 300, tex: 'tex-tech'}, {name: 'Fuel Tank', cost: 300, tex: 'tex-fuel'}],
-            [{name: 'Booster', cost: 400, tex: 'tex-metal'}, {name: 'Decoupler', cost: 300, tex: 'tex-heat'}]
+        // Updated parts list to match your screenshots
+        const ALL_PARTS = [
+            {name: 'Capsule', cost: 200, tex: 'tex-capsule'},
+            {name: 'Fairing+Rover', cost: 1000, tex: 'tex-tech'},
+            {name: 'Antenna Tank', cost: 600, tex: 'tex-tech'},
+            {name: 'Fuel Tank', cost: 300, tex: 'tex-fuel'},
+            {name: 'Booster', cost: 400, tex: 'tex-metal'},
+            {name: 'Decoupler', cost: 300, tex: 'tex-heat'},
+            {name: 'Heat Shield', cost: 500, tex: 'tex-heat'},
+            {name: 'Parachute', cost: 400, tex: 'tex-fabric'}
         ];
 
-        let currentPage = 0, stack = [], cash = 10000;
+        let stack = [], cash = 10000;
 
         function renderParts() {
             const grid = document.getElementById('parts-grid');
             grid.innerHTML = "";
-            PART_PAIRS[currentPage].forEach(p => {
+            ALL_PARTS.forEach(p => {
                 const btn = document.createElement('button');
                 btn.className = 'part-btn ' + p.tex;
-                btn.innerHTML = `${p.name}<br>($${p.cost})`;
+                btn.innerHTML = `${p.name.toUpperCase()}<br>($${p.cost})`;
                 btn.onclick = () => addPart(p.name, p.cost, p.tex);
                 grid.appendChild(btn);
             });
-        }
-
-        function scrollParts(dir) {
-            currentPage = Math.max(0, Math.min(PART_PAIRS.length - 1, currentPage + dir));
-            renderParts();
         }
 
         function addPart(name, cost, tex) {
@@ -141,17 +112,21 @@
             const el = document.createElement('div');
             el.className = 'placed-part ' + tex;
             el.id = 'part-' + stack.length;
-            el.style.height = (name === 'Heat Shield' || name === 'Decoupler') ? '25px' : '65px';
+            
+            let hVal = (name.includes('Shield') || name.includes('Decoupler')) ? 25 : 65;
+            el.style.height = hVal + 'px';
             el.innerText = name.toUpperCase();
+            
             container.appendChild(el);
             document.getElementById('cash').innerText = cash;
-            stack.push({ name, cost, tex });
+            stack.push({ name, cost, tex, hVal: hVal / 25 });
         }
 
         function undo() {
             if (stack.length === 0) return;
             const last = stack.pop();
-            document.getElementById('part-' + stack.length).remove();
+            const el = document.getElementById('part-' + stack.length);
+            if(el) el.remove();
             cash += last.cost;
             document.getElementById('cash').innerText = cash;
         }
@@ -162,14 +137,32 @@
             document.getElementById('game-scene').style.display = 'block';
             const v = document.getElementById('visual-stack');
             v.innerHTML = '';
-            stack.forEach((p, i) => {
+            
+            let currentHeight = 0;
+            stack.forEach((p) => {
                 const e = document.createElement('a-entity');
                 let shape = p.name === 'Capsule' ? 'cone' : 'cylinder';
-                let h = (p.name === 'Heat Shield' || p.name === 'Decoupler') ? 0.5 : 2.5;
-                e.setAttribute('geometry', {primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone'?0:1.2), height: h});
+                let h = p.hVal;
+                
+                e.setAttribute('geometry', {
+                    primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone' ? 0 : 1.2), height: h
+                });
                 
                 let color = "#fff";
                 if(p.tex === 'tex-fuel') color = "#ff9900";
                 if(p.tex === 'tex-heat') color = "#222";
                 if(p.tex === 'tex-tech') color = "#00ffff";
-                if(p.tex === 'tex-metal')
+                if(p.tex === 'tex-metal') color = "#555";
+                
+                e.setAttribute('material', {color: color, metalness: 0.6, roughness: 0.4});
+                e.setAttribute('position', `0 ${currentHeight + (h / 2)} 0`);
+                currentHeight += h;
+                v.appendChild(e);
+            });
+        }
+
+        // Initialize grid on load
+        window.onload = renderParts;
+    </script>
+</body>
+</html>
