@@ -1,84 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: SFS Edition</title>
+    <title>Space Builder Pro: Orbit & Landing Cam</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { font-family: 'Courier New', monospace; margin: 0; overflow: hidden; background: black; color: lime; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
         
-        /* BUILDER INTERFACE */
-        #build-screen { display: flex; flex-direction: column; height: 100vh; background: #0a0a1a; }
-        #blueprint-area { flex-grow: 1; position: relative; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 20px 20px; border-bottom: 2px solid lime; }
-        #parts-menu { height: 50%; overflow-y: scroll; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; background: #16213e; }
-        .part-btn { background: #0f3460; color: white; border: 1px solid lime; padding: 12px; font-size: 11px; text-align: center; cursor: pointer; }
-        .del-btn { background: #600; border-color: red; color: white; grid-column: span 2; font-weight: bold; }
-        .launch-btn { background: #f00; border-color: #fff; color: white; grid-column: span 2; font-weight: bold; padding: 15px; font-size: 14px; margin-top: 5px; }
-        .placed-part { width: 60px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid white; color: black; font-weight: bold; font-size: 9px; text-align: center; display: flex; align-items: center; justify-content: center; }
-
-        /* FLIGHT HUD */
-        #mobile-hud { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .hud-panel { position: absolute; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid lime; pointer-events: auto; }
-        #crew-status { top: 10px; left: 10px; width: 140px; }
-        .o2-bg { width: 100%; height: 6px; background: #222; border: 1px solid #555; margin-top: 2px; }
-        .o2-fill { height: 100%; background: #00f2ff; width: 100%; }
+        /* BUILDER UI */
+        #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; }
+        #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #00ff00; }
         
-        /* MINI-MAP SYSTEM */
-        #map-container { top: 10px; right: 10px; width: 150px; height: 150px; border: 2px solid #555; overflow: hidden; background: #000; position: absolute; pointer-events: auto; }
-        #map-canvas { background: black; }
-        #map-zoom { position: absolute; bottom: 5px; right: 5px; width: 140px; }
+        #menu-container { height: 45%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #444; }
+        .scroll-arrow { height: 40px; background: #222; color: #00ff00; border: none; font-size: 18px; font-weight: bold; }
+        #parts-menu { flex-grow: 1; overflow-y: hidden; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; scroll-behavior: smooth; }
+        
+        .part-btn { background: #16213e; color: white; border: 1px solid #00ff00; padding: 12px; font-size: 11px; font-weight: bold; border-radius: 4px; }
+        .launch-btn { background: #008000; grid-column: span 2; padding: 15px; border: 2px solid white; font-size: 16px; }
 
-        #d-pad { position: absolute; bottom: 30px; left: 30px; display: grid; grid-template-columns: 50px 50px 50px; gap: 5px; pointer-events: auto; }
-        #thrust-zone { position: absolute; bottom: 30px; right: 30px; pointer-events: auto; }
-        .ctrl-btn { width: 50px; height: 50px; background: rgba(0,255,0,0.2); border: 2px solid lime; color: lime; font-weight: bold; border-radius: 8px; font-size: 18px; }
-        .fire-btn { width: 80px; height: 80px; border-radius: 50%; background: rgba(255,0,0,0.4); border: 2px solid red; color: white; font-weight: bold; }
+        .placed-part { width: 70px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid white; color: black; font-weight: bold; font-size: 10px; text-align: center; }
+
+        /* HUD */
+        #hud { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .hud-panel { position: absolute; background: rgba(0,0,0,0.8); border: 1px solid #00ff00; padding: 8px; pointer-events: auto; border-radius: 5px; }
+        
+        /* CHAT */
+        #chat-box { top: 10px; left: 10px; width: 220px; height: 120px; display: flex; flex-direction: column; }
+        #chat-log { flex-grow: 1; overflow-y: auto; font-size: 10px; color: #00ff00; font-family: monospace; }
+        #chat-input-row { display: flex; gap: 5px; }
+        #chat-input { flex-grow: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; font-size: 10px; }
+
+        /* LANDING CAM */
+        #landing-cam-view { bottom: 20px; left: 20px; width: 120px; height: 120px; border: 2px solid red; background: #000; display: none; overflow: hidden; }
+        #landing-cam-label { position: absolute; top: 0; width: 100%; background: red; color: white; font-size: 9px; text-align: center; }
+
+        #controls-right { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        .fire-btn { width: 80px; height: 80px; border-radius: 50%; background: rgba(255,0,0,0.5); border: 3px solid red; color: white; font-weight: bold; }
+        .special-btn { width: 80px; height: 40px; background: #444; border: 1px solid white; color: white; border-radius: 20px; font-size: 10px; display: none; }
+
+        /* ORIENTATION HINT */
+        #cam-hint { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #aaa; }
     </style>
 </head>
 <body>
 
     <div id="build-screen">
         <div id="blueprint-area">
-            <div style="padding: 10px;">
-                <p style="font-size:12px; margin:0;">CASH: $<span id="money-display">1000</span> | O2: <span id="o2-total">0</span>s</p>
+            <div style="padding:15px; font-weight: bold; color: #00ff00;">BUDGET: $<span id="cash">10000</span></div>
+        </div>
+        <div id="menu-container">
+            <button class="scroll-arrow" onclick="scrollMenu(-80)">▲ SCROLL UP</button>
+            <div id="parts-menu">
+                <button class="part-btn" onclick="addPart('capsule')">CAPSULE ($200)</button>
+                <button class="part-btn" onclick="addPart('rover_fairing')">FAIRING+ROVER ($1000)</button>
+                <button class="part-btn" onclick="addPart('ant_tank')">ANTENNA TANK ($600)</button>
+                <button class="part-btn" onclick="addPart('fuel_tank')">FUEL TANK ($300)</button>
+                <button class="part-btn" onclick="addPart('booster')">BOOSTER ($400)</button>
+                <button class="part-btn" onclick="addPart('decoupler')">DECOUPLER ($300)</button>
+                <button class="part-btn" onclick="addPart('heat_shield')">HEAT SHIELD ($500)</button>
+                <button class="part-btn" onclick="addPart('parachute')">PARACHUTE ($400)</button>
+                <button class="part-btn launch-btn" onclick="launch()">INITIALIZE LAUNCH</button>
+            </div>
+            <button class="scroll-arrow" onclick="scrollMenu(80)">▼ SCROLL DOWN</button>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div id="cam-hint">SWIPE TO ROTATE VIEW</div>
+        <div id="chat-box" class="hud-panel">
+            <div id="chat-log">SYSTEM: Comms offline.</div>
+            <div id="chat-input-row">
+                <input type="text" id="chat-input" placeholder="Radio msg...">
+                <button onclick="sendChat()" style="background:#00ff00; border:none; font-weight:bold;">SEND</button>
             </div>
         </div>
-        <div id="parts-menu">
-            <button class="part-btn" onclick="addPart('capsule')">CAPSULE ($200)</button>
-            <button class="part-btn" onclick="addPart('booster')">BOOSTER ($400)</button>
-            <button class="part-btn" onclick="addPart('fuel_tank')">FUEL TANK ($300)</button>
-            <button class="part-btn" onclick="addPart('oxygen')">O2 TANK ($150)</button>
-            <button class="part-btn" onclick="addPart('rcs')">RCS ($100)</button>
-            <button class="part-btn del-btn" onclick="deleteLastPart()">DELETE LAST PART</button>
-            <button class="part-btn launch-btn" onclick="launch()">LAUNCH MISSION</button>
-        </div>
-    </div>
 
-    <div id="mobile-hud">
-        <div id="crew-status" class="hud-panel">
-            <div style="font-size:10px; color:orange;">FUEL: <span id="fuel-display">0</span>L</div>
-            <div style="font-size:9px;">ASTRO 1 <div class="o2-bg"><div id="o2-1" class="o2-fill"></div></div></div>
-            <div style="font-size:9px;">ASTRO 2 <div class="o2-bg"><div id="o2-2" class="o2-fill"></div></div></div>
-            <div style="font-size:9px;">ASTRO 3 <div class="o2-bg"><div id="o2-3" class="o2-fill"></div></div></div>
+        <div id="landing-cam-view" class="hud-panel">
+            <div id="landing-cam-label">LANDING CAM</div>
+            <canvas id="land-canvas" width="120" height="120"></canvas>
         </div>
-
-        <div id="map-container" class="hud-panel">
-            <canvas id="map-canvas" width="150" height="150"></canvas>
-            <input type="range" id="map-zoom" min="0.1" max="2" step="0.1" value="1">
-        </div>
-
-        <div id="d-pad">
-            <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
-            <button class="ctrl-btn" id="btn-left">◀</button><div></div><button class="ctrl-btn" id="btn-right">▶</button>
-            <div></div><button class="ctrl-btn" id="btn-down">▼</button><div></div>
-        </div>
-        <div id="thrust-zone">
-            <button id="thrust-btn" class="fire-btn">FIRE</button>
-        </div>
-    </div>
-
-    <a-scene id="game-scene" style="display:none">
-        <a-assets>
-            <a-mixin id="m-capsule" geometry="primitive: cone; radiusBottom: 0.8; height: 1.5" material="color: white"></a-mixin>
-            <a-mixin id="m-booster" geometry="primitive: cylinder; radius: 0.9; height: 1.0" material="color: #333"></a-mixin>
-            <a-mixin id="m-fuel_tank" geometry="primitive: cylinder; radius: 0.8; height: 2.0" material="color: orange"></a-mixin>
-            <a-mixin id="m-rcs" geometry="primitive: box; width: 0.5; height: 0.5; depth: 0.5" material="color: white"></a-mixin>
+        
+        <div id="controls-right">
+            <button id="f-btn" class="special-btn" onclick="openFairing
