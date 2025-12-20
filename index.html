@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Hatch Update</title>
+    <title>Space Builder: Ultimate Fixed</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -26,30 +26,61 @@
             display: flex; align-items: center; justify-content: center; text-align: center;
         }
 
-        /* TEXTURED CSS CLASSES */
-        /* CAPSULE WITH DOOR TEXTURE */
+        /* --- ADVANCED TEXTURES --- */
+        
+        /* CAPSULE: Shiny Metal + Hatch/Door + Window */
         .tex-capsule { 
             background: 
-                linear-gradient(to right, transparent 40%, #333 40%, #333 60%, transparent 60%), /* The Door Line */
-                linear-gradient(90deg, #666 0%, #eee 50%, #666 100%) !important; 
-            background-size: 100% 70%, 100% 100% !important;
+                radial-gradient(circle at 50% 30%, #add8e6 10%, transparent 12%), /* Window */
+                linear-gradient(to right, transparent 35%, #222 35%, #222 65%, transparent 65%), /* Hatch Door */
+                linear-gradient(90deg, #888 0%, #eee 50%, #888 100%) !important; 
+            background-size: 100% 100%, 100% 60%, 100% 100% !important;
             background-repeat: no-repeat !important;
-            background-position: center !important;
-            border: 1px solid #333 !important; 
+            background-position: center bottom !important;
+            border-radius: 50% 50% 5px 5px !important;
         }
-        
-        .tex-metal { background: linear-gradient(90deg, #666 0%, #eee 50%, #666 100%) !important; }
-        .tex-fuel { background: repeating-linear-gradient(45deg, #ff9900, #ff9900 10px, #cc7a00 10px, #cc7a00 20px) !important; }
-        .tex-fabric { background: radial-gradient(circle, #fff 20%, #ccc 100%) !important; border-radius: 40% 40% 0 0 !important; }
-        .tex-heat { background: repeating-linear-gradient(0deg, #222, #222 4px, #333 4px, #333 8px) !important; }
-        .tex-tech { background: #111; border: 2px solid #00ffff !important; box-shadow: inset 0 0 10px #00ffff; }
+
+        /* PARACHUTE: Red and White Stripes */
+        .tex-fabric { 
+            background: repeating-linear-gradient(90deg, #fff, #fff 20px, #d00 20px, #d00 40px) !important;
+            border-radius: 60% 60% 10px 10px !important;
+        }
+
+        /* FUEL TANK: Industrial Orange with Ridges */
+        .tex-fuel { 
+            background: 
+                repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 12px),
+                linear-gradient(90deg, #cc7a00, #ff9900, #cc7a00) !important; 
+        }
+
+        /* BOOSTER: Dark Metal with Nozzle Look */
+        .tex-metal { 
+            background: linear-gradient(90deg, #333 0%, #666 50%, #333 100%) !important;
+            border-bottom: 5px solid #555 !important;
+        }
+
+        /* TECH/O2: Glowing Blue Lines */
+        .tex-tech { 
+            background: #001a1a; 
+            border: 2px solid #00ffff !important; 
+            box-shadow: inset 0 0 15px #00ffff;
+            background-image: radial-gradient(#00ffff 1px, transparent 1px) !important;
+            background-size: 10px 10px !important;
+        }
+
+        /* HEAT SHIELD: Carbon Fiber/Tile Look */
+        .tex-heat { 
+            background: 
+                conic-gradient(from 0deg at 50% 50%, #111 25%, #222 0 50%, #111 0 75%, #222 0) !important;
+            background-size: 8px 8px !important;
+        }
 
         #sticky-bottom { display: flex; flex-direction: column; }
         .undo-btn { background: #600; color: white; padding: 18px; font-weight: bold; cursor: pointer; text-align: center; font-size: 16px; border:none; }
         .launch-btn { background: #008000; padding: 25px; border: none; font-size: 20px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; }
 
         #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 24px; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none; }
-        .placed-part { width: 140px; margin: 0 auto; color: black; font-weight: bold; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; }
+        .placed-part { width: 140px; margin: 0 auto; color: black; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -76,6 +107,7 @@
     </a-scene>
 
     <script>
+        // Use the ordered pairs as requested
         const PART_PAIRS = [
             [{name: 'Capsule', cost: 200, tex: 'tex-capsule'}, {name: 'Parachute', cost: 400, tex: 'tex-fabric'}],
             [{name: 'RCS', cost: 150, tex: 'tex-tech'}, {name: 'Heat Shield', cost: 500, tex: 'tex-heat'}],
@@ -109,7 +141,7 @@
             const el = document.createElement('div');
             el.className = 'placed-part ' + tex;
             el.id = 'part-' + stack.length;
-            el.style.height = '60px';
+            el.style.height = (name === 'Heat Shield' || name === 'Decoupler') ? '25px' : '65px';
             el.innerText = name.toUpperCase();
             container.appendChild(el);
             document.getElementById('cash').innerText = cash;
@@ -133,11 +165,11 @@
             stack.forEach((p, i) => {
                 const e = document.createElement('a-entity');
                 let shape = p.name === 'Capsule' ? 'cone' : 'cylinder';
-                e.setAttribute('geometry', {primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone'?0:1.2), height: 2});
+                let h = (p.name === 'Heat Shield' || p.name === 'Decoupler') ? 0.5 : 2.5;
+                e.setAttribute('geometry', {primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone'?0:1.2), height: h});
                 
                 let color = "#fff";
                 if(p.tex === 'tex-fuel') color = "#ff9900";
-                if(p.tex === 'tex-heat') color = "#333";
+                if(p.tex === 'tex-heat') color = "#222";
                 if(p.tex === 'tex-tech') color = "#00ffff";
-                
-                e.setAttribute('material', {color: color, metalness: 0.8, roughness:
+                if(p.tex === 'tex-metal')
