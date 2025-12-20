@@ -48,6 +48,8 @@
         #sticky-bottom { display: flex; flex-direction: column; }
         .undo-btn { background: #600; color: white; padding: 15px; font-weight: bold; cursor: pointer; text-align: center; border:none; }
         .launch-btn { background: #008000; padding: 20px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; }
+        
+        #return-btn { position: absolute; bottom: 20px; right: 20px; padding: 15px; background: #222; color: #0f0; border: 2px solid #0f0; font-weight: bold; cursor: pointer; display: none; z-index: 200; }
 
         #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 22px; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none; }
         .placed-part { width: 140px; margin: 0 auto; color: black; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.2); }
@@ -70,14 +72,21 @@
         </div>
     </div>
 
+    <button id="return-btn" onclick="resetBuilder()">RESET BUILDER</button>
+
     <a-scene id="game-scene" style="display:none">
         <a-sky color="#050505"></a-sky>
-        <a-entity id="visual-stack"></a-entity>
+        <a-entity id="rocket-group">
+            <a-entity id="visual-stack"></a-entity>
+            <a-entity id="fire" position="0 -1 0" visible="false">
+                <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2"></a-cone>
+                <a-cone color="#ffd700" radius-bottom="0.4" radius-top="0.05" height="1.5" position="0 0.2 0"></a-cone>
+            </a-entity>
+        </a-entity>
         <a-camera position="0 5 15"></a-camera>
     </a-scene>
 
     <script>
-        // Split into pages so "Scroll Up/Down" works as seen in your screenshots
         const PART_PAGES = [
             [
                 {name: 'Capsule', cost: 200, tex: 'tex-capsule'},
@@ -114,7 +123,11 @@
         }
 
         function addPart(name, cost, tex) {
-            if (cash < cost) return;
+            if (cash < cost) {
+                document.getElementById('budget-display').style.color = 'red';
+                setTimeout(() => document.getElementById('budget-display').style.color = '#0f0', 500);
+                return;
+            }
             cash -= cost;
             const container = document.getElementById('rocket-container');
             const el = document.createElement('div');
@@ -143,8 +156,12 @@
             if (stack.length === 0) return;
             document.getElementById('build-screen').style.display = 'none';
             document.getElementById('game-scene').style.display = 'block';
+            document.getElementById('return-btn').style.display = 'block';
+            
             const v = document.getElementById('visual-stack');
+            const group = document.getElementById('rocket-group');
             v.innerHTML = '';
+            group.setAttribute('position', '0 0 0');
             
             let currentHeight = 0;
             stack.forEach((p) => {
@@ -167,6 +184,21 @@
                 currentHeight += h;
                 v.appendChild(e);
             });
+
+            // Start Animation
+            setTimeout(() => {
+                document.getElementById('fire').setAttribute('visible', 'true');
+                group.setAttribute('animation', {
+                    property: 'position',
+                    to: '0 100 0',
+                    dur: 10000,
+                    easing: 'easeInQuad'
+                });
+            }, 1000);
+        }
+
+        function resetBuilder() {
+            location.reload();
         }
 
         window.onload = renderParts;
