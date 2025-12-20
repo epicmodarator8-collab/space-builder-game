@@ -20,14 +20,13 @@
         #menu-container { height: 60%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
         .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 16px; text-transform: uppercase; }
         
-        /* Fixed Grid: Ensures buttons are always visible */
         #parts-grid { 
             flex-grow: 1; 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             gap: 10px; 
             padding: 15px; 
-            overflow-y: auto;
+            align-content: center;
         }
         
         .part-btn { 
@@ -40,7 +39,6 @@
             background: radial-gradient(circle at 50% 30%, #add8e6 10%, transparent 12%), linear-gradient(to right, transparent 35%, #222 35%, #222 65%, transparent 65%), linear-gradient(90deg, #888 0%, #eee 50%, #888 100%) !important; 
             background-size: 100% 100%, 100% 60%, 100% 100% !important; background-repeat: no-repeat !important; background-position: center bottom !important; border-radius: 40% 40% 5px 5px !important;
         }
-
         .tex-fabric { background: repeating-linear-gradient(90deg, #fff, #fff 15px, #d00 15px, #d00 30px) !important; border-radius: 50% 50% 5px 5px !important; }
         .tex-fuel { background: repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 12px), linear-gradient(90deg, #cc7a00, #ff9900, #cc7a00) !important; }
         .tex-metal { background: linear-gradient(90deg, #333 0%, #666 50%, #333 100%) !important; border-bottom: 4px solid #444 !important; }
@@ -79,30 +77,40 @@
     </a-scene>
 
     <script>
-        // Updated parts list to match your screenshots
-        const ALL_PARTS = [
-            {name: 'Capsule', cost: 200, tex: 'tex-capsule'},
-            {name: 'Fairing+Rover', cost: 1000, tex: 'tex-tech'},
-            {name: 'Antenna Tank', cost: 600, tex: 'tex-tech'},
-            {name: 'Fuel Tank', cost: 300, tex: 'tex-fuel'},
-            {name: 'Booster', cost: 400, tex: 'tex-metal'},
-            {name: 'Decoupler', cost: 300, tex: 'tex-heat'},
-            {name: 'Heat Shield', cost: 500, tex: 'tex-heat'},
-            {name: 'Parachute', cost: 400, tex: 'tex-fabric'}
+        // Split into pages so "Scroll Up/Down" works as seen in your screenshots
+        const PART_PAGES = [
+            [
+                {name: 'Capsule', cost: 200, tex: 'tex-capsule'},
+                {name: 'Fairing+Rover', cost: 1000, tex: 'tex-tech'},
+                {name: 'Antenna Tank', cost: 600, tex: 'tex-tech'},
+                {name: 'Fuel Tank', cost: 300, tex: 'tex-fuel'}
+            ],
+            [
+                {name: 'Booster', cost: 400, tex: 'tex-metal'},
+                {name: 'Decoupler', cost: 300, tex: 'tex-heat'},
+                {name: 'Heat Shield', cost: 500, tex: 'tex-heat'},
+                {name: 'Parachute', cost: 400, tex: 'tex-fabric'}
+            ]
         ];
 
+        let currentPage = 0;
         let stack = [], cash = 10000;
 
         function renderParts() {
             const grid = document.getElementById('parts-grid');
             grid.innerHTML = "";
-            ALL_PARTS.forEach(p => {
+            PART_PAGES[currentPage].forEach(p => {
                 const btn = document.createElement('button');
                 btn.className = 'part-btn ' + p.tex;
                 btn.innerHTML = `${p.name.toUpperCase()}<br>($${p.cost})`;
                 btn.onclick = () => addPart(p.name, p.cost, p.tex);
                 grid.appendChild(btn);
             });
+        }
+
+        function scrollParts(dir) {
+            currentPage = Math.max(0, Math.min(PART_PAGES.length - 1, currentPage + dir));
+            renderParts();
         }
 
         function addPart(name, cost, tex) {
@@ -161,7 +169,6 @@
             });
         }
 
-        // Initialize grid on load
         window.onload = renderParts;
     </script>
 </body>
