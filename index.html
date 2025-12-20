@@ -1,26 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Ultimate</title>
+    <title>Space Builder: Fixed Navigation</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
         
-        /* BUILDER INTERFACE */
         #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; position: relative; z-index: 100; }
-        #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #00ff00; overflow-y: auto; }
-        #menu-container { height: 55%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
-        #parts-menu { flex-grow: 1; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; }
+        #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #00ff00; }
         
-        /* BUTTON STYLES */
-        .part-btn { background: #16213e; color: white; border: 1px solid #00ff00; padding: 15px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; text-transform: uppercase; }
-        .undo-btn { background: #600; color: white; border: 1px solid #ff4444; padding: 12px; font-weight: bold; cursor: pointer; width: 95%; margin: 5px auto; border-radius: 4px; text-align: center; }
-        .launch-btn { background: #008000; padding: 20px; border: 1px solid white; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; color: white; }
+        #menu-container { height: 60%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
+
+        /* SCROLL BUTTONS */
+        .scroll-nav { 
+            background: #222; 
+            color: #0f0; 
+            text-align: center; 
+            padding: 8px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            border: none;
+            font-size: 14px;
+        }
+        .scroll-nav:active { background: #333; }
+
+        /* PARTS GRID - FIXED TO SHOW 8 */
+        #parts-grid { 
+            flex-grow: 1; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: repeat(4, 1fr);
+            gap: 8px; 
+            padding: 10px;
+            overflow: hidden;
+        }
+        
+        .part-btn { 
+            background: #16213e; 
+            color: white; 
+            border: 1px solid #00ff00; 
+            font-size: 11px; 
+            font-weight: bold; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        /* STICKY BOTTOM BUTTONS */
+        #sticky-bottom { display: flex; flex-direction: column; }
+        .undo-btn { background: #600; color: white; border-top: 1px solid #ff4444; padding: 15px; font-weight: bold; cursor: pointer; text-align: center; }
+        .launch-btn { background: #008000; padding: 20px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; color: white; }
 
         #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 20px; position: absolute; top: 0; left: 0; z-index: 10; }
-        .placed-part { width: 120px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid #fff; color: black; font-weight: bold; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 2px; }
-
-        #hud { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
+        .placed-part { width: 140px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid #fff; color: black; font-weight: bold; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; }
     </style>
 </head>
 <body>
@@ -30,43 +66,72 @@
         <div id="blueprint-area"></div>
         
         <div id="menu-container">
-            <div id="parts-menu">
-                <button class="part-btn" onclick="addPart('capsule', 200, '#ffffff')">CAPSULE ($200)</button>
-                <button class="part-btn" onclick="addPart('fuel tank', 300, '#ff9900')">FUEL TANK ($300)</button>
-                <button class="part-btn" onclick="addPart('booster', 400, '#444444')">BOOSTER ($400)</button>
-                <button class="part-btn" onclick="addPart('heat shield', 500, '#ff4500')">HEAT SHIELD ($500)</button>
-                <button class="part-btn" onclick="addPart('decoupler', 300, '#888888')">DECOUPLER ($300)</button>
-                <button class="part-btn" onclick="addPart('parachute', 400, '#ffffff')">PARACHUTE ($400)</button>
-            </div>
-            
-            <div class="undo-btn" onclick="undo()">⚠ DELETE LAST PART</div>
-            <button class="launch-btn" onclick="launch()">INITIALIZE LAUNCH</button>
-        </div>
-    </div>
+            <button class="scroll-nav" onclick="scrollParts(-1)">▲ SCROLL UP</button>
 
-    <div id="hud">
-        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); border:1px solid #0f0; padding:10px; pointer-events:auto;">
-            <button onclick="location.reload()" style="background:#444; color:white; border:none; padding:5px; cursor:pointer;">REBUILD</button>
+            <div id="parts-grid"></div>
+
+            <button class="scroll-nav" onclick="scrollParts(1)">▼ SCROLL DOWN</button>
+            
+            <div id="sticky-bottom">
+                <div class="undo-btn" onclick="undo()">⚠ DELETE LAST PART</div>
+                <button class="launch-btn" onclick="launch()">INITIALIZE LAUNCH</button>
+            </div>
         </div>
     </div>
 
     <a-scene id="game-scene" style="display:none">
         <a-sky color="#000"></a-sky>
-        <a-entity id="rocket-rig">
-            <a-entity id="visual-stack"></a-entity>
-        </a-entity>
-        <a-camera position="0 5 20" look-controls="enabled:false"></a-camera>
+        <a-entity id="rocket-rig"><a-entity id="visual-stack"></a-entity></a-entity>
+        <a-camera position="0 5 20"></a-camera>
     </a-scene>
 
     <script>
+        const ALL_PARTS = [
+            {name: 'Capsule', cost: 200, col: '#ffffff'},
+            {name: 'Fairing+Rover', cost: 1000, col: '#888888'},
+            {name: 'Antenna Tank', cost: 600, col: '#4444ff'},
+            {name: 'Fuel Tank', cost: 300, col: '#ff9900'},
+            {name: 'Booster', cost: 400, col: '#333333'},
+            {name: 'Heat Shield', cost: 500, col: '#ff4500'},
+            {name: 'Decoupler', cost: 300, col: '#aaaaaa'},
+            {name: 'Parachute', cost: 400, col: '#ffffff'},
+            {name: 'Warp Drive', cost: 2000, col: '#00ffff'},
+            {name: 'Solar Panel', cost: 500, col: '#2222ff'},
+            {name: 'Landing Leg', cost: 200, col: '#cccccc'},
+            {name: 'Ion Engine', cost: 800, col: '#0088ff'}
+        ];
+
+        let currentPage = 0;
         let stack = []; 
         let cash = 10000; 
         let buildY = 20;
 
+        function renderParts() {
+            const grid = document.getElementById('parts-grid');
+            grid.innerHTML = "";
+            const start = currentPage * 8;
+            const pageParts = ALL_PARTS.slice(start, start + 8);
+
+            pageParts.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'part-btn';
+                btn.innerHTML = `${p.name}<br>($${p.cost})`;
+                btn.onclick = () => addPart(p.name, p.cost, p.col);
+                grid.appendChild(btn);
+            });
+        }
+
+        function scrollParts(dir) {
+            const maxPage = Math.floor((ALL_PARTS.length - 1) / 8);
+            currentPage += dir;
+            if (currentPage < 0) currentPage = 0;
+            if (currentPage > maxPage) currentPage = maxPage;
+            renderParts();
+        }
+
         function addPart(name, cost, color) {
             if (cash < cost) return;
             cash -= cost;
-            
             const partHeight = 45;
             const el = document.createElement('div');
             el.className = 'placed-part';
@@ -75,24 +140,18 @@
             el.style.height = partHeight + 'px';
             el.style.bottom = buildY + 'px';
             el.innerText = name.toUpperCase();
-            
             document.getElementById('blueprint-area').appendChild(el);
             document.getElementById('cash').innerText = cash;
-            
             stack.push({ name, cost, color, h: partHeight });
             buildY += partHeight;
         }
 
-        // Logic for Delete Last Part button
         function undo() {
             if (stack.length === 0) return;
-            
             const lastPart = stack.pop();
             const el = document.getElementById('part-' + stack.length);
-            
-            cash += lastPart.cost; // Refund the money
-            buildY -= lastPart.h; // Reset build position
-            
+            cash += lastPart.cost;
+            buildY -= lastPart.h;
             if (el) el.remove();
             document.getElementById('cash').innerText = cash;
         }
@@ -101,9 +160,8 @@
             if (stack.length === 0) return;
             document.getElementById('build-screen').style.display = 'none';
             document.getElementById('game-scene').style.display = 'block';
-            document.getElementById('hud').style.display = 'block';
-            
             const v = document.getElementById('visual-stack');
+            v.innerHTML = '';
             stack.forEach((p, i) => {
                 const e = document.createElement('a-entity');
                 e.setAttribute('geometry', `primitive:cylinder; radius:1; height:2`);
@@ -112,6 +170,9 @@
                 v.appendChild(e);
             });
         }
+
+        // Initialize first page
+        renderParts();
     </script>
 </body>
 </html>
