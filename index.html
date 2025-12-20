@@ -1,34 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Interstellar Gallery</title>
+    <title>Space Builder: Ultimate</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
         
-        /* BUILDER UI */
+        /* BUILDER INTERFACE */
         #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; position: relative; z-index: 100; }
         #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #00ff00; overflow-y: auto; }
-        
-        /* SAVE/LOAD & GALLERY */
-        #save-load-panel { background: #1a1a1a; padding: 10px; display: flex; gap: 10px; border-bottom: 1px solid #333; }
-        #rocket-name-input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 5px; flex-grow: 1; }
-        .save-btn { background: #0044ff; color: white; border: none; padding: 5px 15px; cursor: pointer; font-weight: bold; }
-        
-        #gallery-sidebar { width: 150px; background: #111; border-left: 1px solid #0f0; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-        .gallery-item { background: #222; border: 1px solid #444; padding: 8px; font-size: 11px; cursor: pointer; text-align: center; border-radius: 3px; }
-        .gallery-item:hover { border-color: #0f0; background: #2a2a2a; }
-
-        #main-build-container { display: flex; flex-grow: 1; overflow: hidden; }
-        #menu-container { height: 40%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
+        #menu-container { height: 55%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
         #parts-menu { flex-grow: 1; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; }
         
-        .part-btn { background: #16213e; color: white; border: 1px solid #00ff00; padding: 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; }
-        .undo-btn { background: #600; color: white; border: 1px solid red; padding: 10px; font-weight: bold; cursor: pointer; width: 95%; margin: 5px auto; border-radius: 4px; }
-        .launch-btn { background: #008000; padding: 15px; border: 1px solid white; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; }
+        /* BUTTON STYLES */
+        .part-btn { background: #16213e; color: white; border: 1px solid #00ff00; padding: 15px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; text-transform: uppercase; }
+        .undo-btn { background: #600; color: white; border: 1px solid #ff4444; padding: 12px; font-weight: bold; cursor: pointer; width: 95%; margin: 5px auto; border-radius: 4px; text-align: center; }
+        .launch-btn { background: #008000; padding: 20px; border: 1px solid white; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; color: white; }
 
-        #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 18px; position: absolute; top: 50px; left: 0; z-index: 10; pointer-events:none; }
-        .placed-part { width: 80px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid #fff; color: black; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+        #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 20px; position: absolute; top: 0; left: 0; z-index: 10; }
+        .placed-part { width: 120px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid #fff; color: black; font-weight: bold; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 2px; }
 
         #hud { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
     </style>
@@ -36,58 +26,48 @@
 <body>
 
     <div id="build-screen">
-        <div id="save-load-panel">
-            <input type="text" id="rocket-name-input" placeholder="Name your rocket...">
-            <button class="save-btn" onclick="saveRocket()">SAVE DESIGN</button>
-        </div>
-
-        <div id="main-build-container">
-            <div id="blueprint-area">
-                <div id="budget-display">BUDGET: $<span id="cash">10000</span></div>
-            </div>
-            
-            <div id="gallery-sidebar">
-                <div style="font-size: 10px; color: #0f0; margin-bottom: 5px; font-weight: bold;">SAVED ROCKETS</div>
-                <div id="gallery-list"></div>
-            </div>
-        </div>
+        <div id="budget-display">BUDGET: $<span id="cash">10000</span></div>
+        <div id="blueprint-area"></div>
         
         <div id="menu-container">
             <div id="parts-menu">
-                <button class="part-btn" onclick="addPart('capsule', 200, '#fff')">CAPSULE ($200)</button>
-                <button class="part-btn" onclick="addPart('fuel', 300, '#f90')">FUEL TANK ($300)</button>
-                <button class="part-btn" onclick="addPart('booster', 400, '#444')">BOOSTER ($400)</button>
-                <button class="part-btn" onclick="addPart('shield', 500, '#ff4500')">HEAT SHIELD ($500)</button>
+                <button class="part-btn" onclick="addPart('capsule', 200, '#ffffff')">CAPSULE ($200)</button>
+                <button class="part-btn" onclick="addPart('fuel tank', 300, '#ff9900')">FUEL TANK ($300)</button>
+                <button class="part-btn" onclick="addPart('booster', 400, '#444444')">BOOSTER ($400)</button>
+                <button class="part-btn" onclick="addPart('heat shield', 500, '#ff4500')">HEAT SHIELD ($500)</button>
+                <button class="part-btn" onclick="addPart('decoupler', 300, '#888888')">DECOUPLER ($300)</button>
+                <button class="part-btn" onclick="addPart('parachute', 400, '#ffffff')">PARACHUTE ($400)</button>
             </div>
-            <button class="undo-btn" onclick="undo()">DELETE LAST PART</button>
+            
+            <div class="undo-btn" onclick="undo()">⚠ DELETE LAST PART</div>
             <button class="launch-btn" onclick="launch()">INITIALIZE LAUNCH</button>
         </div>
     </div>
 
     <div id="hud">
-        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); border:1px solid #0f0; padding:10px;">
-            <button onclick="location.reload()" style="background:#0044ff; color:white; border:none; padding:5px;">END MISSION</button>
+        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); border:1px solid #0f0; padding:10px; pointer-events:auto;">
+            <button onclick="location.reload()" style="background:#444; color:white; border:none; padding:5px; cursor:pointer;">REBUILD</button>
         </div>
     </div>
 
     <a-scene id="game-scene" style="display:none">
         <a-sky color="#000"></a-sky>
-        <a-entity id="rocket-rig"><a-entity id="visual-stack"></a-entity></a-entity>
-        <a-camera position="0 5 30" look-controls="enabled:false"></a-camera>
+        <a-entity id="rocket-rig">
+            <a-entity id="visual-stack"></a-entity>
+        </a-entity>
+        <a-camera position="0 5 20" look-controls="enabled:false"></a-camera>
     </a-scene>
 
     <script>
         let stack = []; 
         let cash = 10000; 
-        let buildY = 10;
-
-        // Initialize Gallery on load
-        window.onload = updateGallery;
+        let buildY = 20;
 
         function addPart(name, cost, color) {
             if (cash < cost) return;
             cash -= cost;
-            const partHeight = 40;
+            
+            const partHeight = 45;
             const el = document.createElement('div');
             el.className = 'placed-part';
             el.id = 'part-' + stack.length;
@@ -95,61 +75,26 @@
             el.style.height = partHeight + 'px';
             el.style.bottom = buildY + 'px';
             el.innerText = name.toUpperCase();
+            
             document.getElementById('blueprint-area').appendChild(el);
             document.getElementById('cash').innerText = cash;
+            
             stack.push({ name, cost, color, h: partHeight });
             buildY += partHeight;
         }
 
+        // Logic for Delete Last Part button
         function undo() {
             if (stack.length === 0) return;
+            
             const lastPart = stack.pop();
             const el = document.getElementById('part-' + stack.length);
-            cash += lastPart.cost;
-            buildY -= lastPart.h;
-            el.remove();
-            document.getElementById('cash').innerText = cash;
-        }
-
-        function saveRocket() {
-            const name = document.getElementById('rocket-name-input').value;
-            if (!name) return alert("Please name your rocket!");
-            const rocketData = { stack, cash, buildY };
-            localStorage.setItem('rocket_' + name, JSON.stringify(rocketData));
-            updateGallery(); // Refresh the sidebar
-            alert("Design '" + name + "' saved to gallery!");
-        }
-
-        function loadRocket(name) {
-            const savedData = localStorage.getItem('rocket_' + name);
-            if (!savedData) return;
             
-            // Wipe current build
-            document.getElementById('blueprint-area').innerHTML = '<div id="budget-display">BUDGET: $<span id="cash">10000</span></div>';
-            const data = JSON.parse(savedData);
-            stack = [];
-            cash = 10000;
-            buildY = 10;
-
-            // Load saved stack
-            data.stack.forEach(p => addPart(p.name, p.cost, p.color));
-            document.getElementById('rocket-name-input').value = name;
-        }
-
-        function updateGallery() {
-            const list = document.getElementById('gallery-list');
-            list.innerHTML = "";
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('rocket_')) {
-                    const rocketName = key.replace('rocket_', '');
-                    const btn = document.createElement('div');
-                    btn.className = 'gallery-item';
-                    btn.innerText = rocketName;
-                    btn.onclick = () => loadRocket(rocketName);
-                    list.appendChild(btn);
-                }
-            }
+            cash += lastPart.cost; // Refund the money
+            buildY -= lastPart.h; // Reset build position
+            
+            if (el) el.remove();
+            document.getElementById('cash').innerText = cash;
         }
 
         function launch() {
@@ -157,6 +102,7 @@
             document.getElementById('build-screen').style.display = 'none';
             document.getElementById('game-scene').style.display = 'block';
             document.getElementById('hud').style.display = 'block';
+            
             const v = document.getElementById('visual-stack');
             stack.forEach((p, i) => {
                 const e = document.createElement('a-entity');
