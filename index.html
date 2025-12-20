@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Ultimate Fixed</title>
+    <title>Space Builder: Hatch Update</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
-        
         #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; position: relative; z-index: 100; }
         
-        /* Blueprint area needs to allow scrolling for tall rockets */
         #blueprint-area { 
             flex-grow: 1; 
             position: relative; 
@@ -16,179 +14,113 @@
             border-bottom: 2px solid #0f0; 
             overflow-y: auto; 
             display: flex; 
-            flex-direction: column-reverse; /* Keeps the bottom of the rocket at the bottom */
+            flex-direction: column-reverse; 
         }
-        
+
         #menu-container { height: 60%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
-
-        .scroll-nav { 
-            background: #222; 
-            color: #0f0; 
-            text-align: center; 
-            padding: 12px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            border: none;
-            font-size: 16px;
-            text-transform: uppercase;
-        }
-        .scroll-nav:active { background: #444; color: #fff; }
-
-        #parts-grid { 
-            flex-grow: 1; 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 15px; 
-            padding: 20px;
-            align-content: center;
-        }
+        .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 16px; text-transform: uppercase; }
+        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; align-content: center; }
         
         .part-btn { 
-            background: #16213e; 
-            color: white; 
-            border: 2px solid #00ff00; 
-            font-size: 14px; 
-            font-weight: bold; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            height: 100px;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            background: #16213e; color: white; border: 2px solid #00ff00; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; height: 100px;
+            display: flex; align-items: center; justify-content: center; text-align: center;
         }
+
+        /* TEXTURED CSS CLASSES */
+        /* CAPSULE WITH DOOR TEXTURE */
+        .tex-capsule { 
+            background: 
+                linear-gradient(to right, transparent 40%, #333 40%, #333 60%, transparent 60%), /* The Door Line */
+                linear-gradient(90deg, #666 0%, #eee 50%, #666 100%) !important; 
+            background-size: 100% 70%, 100% 100% !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            border: 1px solid #333 !important; 
+        }
+        
+        .tex-metal { background: linear-gradient(90deg, #666 0%, #eee 50%, #666 100%) !important; }
+        .tex-fuel { background: repeating-linear-gradient(45deg, #ff9900, #ff9900 10px, #cc7a00 10px, #cc7a00 20px) !important; }
+        .tex-fabric { background: radial-gradient(circle, #fff 20%, #ccc 100%) !important; border-radius: 40% 40% 0 0 !important; }
+        .tex-heat { background: repeating-linear-gradient(0deg, #222, #222 4px, #333 4px, #333 8px) !important; }
+        .tex-tech { background: #111; border: 2px solid #00ffff !important; box-shadow: inset 0 0 10px #00ffff; }
 
         #sticky-bottom { display: flex; flex-direction: column; }
-        
-        .undo-btn { 
-            background: #600; 
-            color: white; 
-            border: none;
-            border-top: 1px solid #ff4444; 
-            padding: 18px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            text-align: center; 
-            font-size: 16px; 
-        }
-
-        .launch-btn { 
-            background: #008000; 
-            padding: 25px; 
-            border: none; 
-            font-size: 20px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            color: white; 
-            text-transform: uppercase; 
-        }
+        .undo-btn { background: #600; color: white; padding: 18px; font-weight: bold; cursor: pointer; text-align: center; font-size: 16px; border:none; }
+        .launch-btn { background: #008000; padding: 25px; border: none; font-size: 20px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; }
 
         #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 24px; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none; }
-        
-        /* Fixed Part Styling */
-        .placed-part { 
-            width: 140px; 
-            margin: 0 auto; 
-            border: 2px solid #fff; 
-            color: black; 
-            font-weight: bold; 
-            font-size: 11px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            text-align: center;
-            flex-shrink: 0; /* Prevents parts from squishing */
-        }
+        .placed-part { width: 140px; margin: 0 auto; color: black; font-weight: bold; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; }
     </style>
 </head>
 <body>
 
     <div id="build-screen">
         <div id="budget-display">BUDGET: $<span id="cash">10000</span></div>
-        <div id="blueprint-area">
-            <div id="rocket-container" style="display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 20px;"></div>
-        </div>
+        <div id="blueprint-area"><div id="rocket-container" style="display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 20px;"></div></div>
         
         <div id="menu-container">
             <button class="scroll-nav" onclick="scrollParts(-1)">▲ SCROLL UP</button>
             <div id="parts-grid"></div>
             <button class="scroll-nav" onclick="scrollParts(1)">▼ SCROLL DOWN</button>
-            
             <div id="sticky-bottom">
-                <div class="undo-btn" onclick="undo()">⚠ DELETE LAST PART</div>
+                <button class="undo-btn" onclick="undo()">⚠ DELETE LAST PART</button>
                 <button class="launch-btn" onclick="launch()">INITIALIZE LAUNCH</button>
             </div>
         </div>
     </div>
 
     <a-scene id="game-scene" style="display:none">
-        <a-sky color="#000"></a-sky>
-        <a-entity id="rocket-rig"><a-entity id="visual-stack"></a-entity></a-entity>
+        <a-sky color="#050505"></a-sky>
+        <a-entity id="visual-stack"></a-entity>
         <a-camera position="0 5 20"></a-camera>
     </a-scene>
 
     <script>
-        // Custom order in pairs as requested
         const PART_PAIRS = [
-            [{name: 'Capsule', cost: 200, col: '#ffffff'}, {name: 'Parachute', cost: 400, col: '#ffffff'}],
-            [{name: 'RCS', cost: 150, col: '#cccccc'}, {name: 'Heat Shield', cost: 500, col: '#ff4500'}],
-            [{name: 'O2 Tank', cost: 300, col: '#00ccff'}, {name: 'Fuel Tank', cost: 300, col: '#ff9900'}],
-            [{name: 'Booster', cost: 400, col: '#333333'}, {name: 'Decoupler', cost: 300, col: '#aaaaaa'}]
+            [{name: 'Capsule', cost: 200, tex: 'tex-capsule'}, {name: 'Parachute', cost: 400, tex: 'tex-fabric'}],
+            [{name: 'RCS', cost: 150, tex: 'tex-tech'}, {name: 'Heat Shield', cost: 500, tex: 'tex-heat'}],
+            [{name: 'O2 Tank', cost: 300, tex: 'tex-tech'}, {name: 'Fuel Tank', cost: 300, tex: 'tex-fuel'}],
+            [{name: 'Booster', cost: 400, tex: 'tex-metal'}, {name: 'Decoupler', cost: 300, tex: 'tex-heat'}]
         ];
 
-        let currentPage = 0;
-        let stack = []; 
-        let cash = 10000; 
+        let currentPage = 0, stack = [], cash = 10000;
 
         function renderParts() {
             const grid = document.getElementById('parts-grid');
             grid.innerHTML = "";
-            const pair = PART_PAIRS[currentPage];
-
-            pair.forEach(p => {
+            PART_PAIRS[currentPage].forEach(p => {
                 const btn = document.createElement('button');
-                btn.className = 'part-btn';
+                btn.className = 'part-btn ' + p.tex;
                 btn.innerHTML = `${p.name}<br>($${p.cost})`;
-                btn.onclick = () => addPart(p.name, p.cost, p.col);
+                btn.onclick = () => addPart(p.name, p.cost, p.tex);
                 grid.appendChild(btn);
             });
         }
 
         function scrollParts(dir) {
-            currentPage += dir;
-            if (currentPage < 0) currentPage = 0;
-            if (currentPage >= PART_PAIRS.length) currentPage = PART_PAIRS.length - 1;
+            currentPage = Math.max(0, Math.min(PART_PAIRS.length - 1, currentPage + dir));
             renderParts();
         }
 
-        function addPart(name, cost, color) {
+        function addPart(name, cost, tex) {
             if (cash < cost) return;
             cash -= cost;
-            
             const container = document.getElementById('rocket-container');
             const el = document.createElement('div');
-            el.className = 'placed-part';
+            el.className = 'placed-part ' + tex;
             el.id = 'part-' + stack.length;
-            el.style.backgroundColor = color;
-            el.style.height = '50px';
+            el.style.height = '60px';
             el.innerText = name.toUpperCase();
-            
             container.appendChild(el);
             document.getElementById('cash').innerText = cash;
-            stack.push({ name, cost, color });
-
-            // Auto-scroll to top of rocket
-            document.getElementById('blueprint-area').scrollTop = 0;
+            stack.push({ name, cost, tex });
         }
 
         function undo() {
             if (stack.length === 0) return;
-            const lastPart = stack.pop();
-            const el = document.getElementById('part-' + stack.length);
-            
-            cash += lastPart.cost;
-            if (el) el.remove();
+            const last = stack.pop();
+            document.getElementById('part-' + stack.length).remove();
+            cash += last.cost;
             document.getElementById('cash').innerText = cash;
         }
 
@@ -196,21 +128,16 @@
             if (stack.length === 0) return;
             document.getElementById('build-screen').style.display = 'none';
             document.getElementById('game-scene').style.display = 'block';
-            
             const v = document.getElementById('visual-stack');
             v.innerHTML = '';
             stack.forEach((p, i) => {
                 const e = document.createElement('a-entity');
-                // Added slightly different shapes for Capsule
-                const shape = p.name === 'Capsule' ? 'cone' : 'cylinder';
-                e.setAttribute('geometry', `primitive:${shape}; radiusBottom:1.2; radiusTop:${shape==='cone'?0:1.2}; height:2`);
-                e.setAttribute('material', `color:${p.color}`);
-                e.setAttribute('position', `0 ${i * 2} 0`);
-                v.appendChild(e);
-            });
-        }
-
-        renderParts();
-    </script>
-</body>
-</html>
+                let shape = p.name === 'Capsule' ? 'cone' : 'cylinder';
+                e.setAttribute('geometry', {primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone'?0:1.2), height: 2});
+                
+                let color = "#fff";
+                if(p.tex === 'tex-fuel') color = "#ff9900";
+                if(p.tex === 'tex-heat') color = "#333";
+                if(p.tex === 'tex-tech') color = "#00ffff";
+                
+                e.setAttribute('material', {color: color, metalness: 0.8, roughness:
