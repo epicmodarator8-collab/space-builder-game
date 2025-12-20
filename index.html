@@ -81,4 +81,203 @@
         </div>
         
         <div id="controls-right">
-            <button id="f-btn" class="special-btn" onclick="openFairing
+            <button id="f-btn" class="special-btn" onclick="openFairing()">OPEN FAIRING</button>
+            <button id="s-btn" class="special-btn" style="background:orange; color:black;" onclick="stage()">STAGE</button>
+            <button id="fire-btn" class="fire-btn">IGNITION</button>
+        </div>
+    </div>
+
+    <a-scene id="game-scene" style="display:none" shadow="type: pcfsoft">
+        <a-sky id="sky" color="#87CEEB"></a-sky>
+        
+        <a-cylinder id="ground" position="0 -1 0" radius="100" height="2" color="#333"></a-cylinder>
+        <a-cylinder position="0 -5 0" radius="2000" height="4" color="#004488"></a-cylinder>
+
+        <a-entity id="player-container" position="0 1 0">
+            <a-entity id="rocket-pivot">
+                <a-entity id="visual-stack"></a-entity>
+                <a-entity id="flame" geometry="primitive: cone; height: 1.5; radiusBottom: 0.4" material="color: orange; emissive: #ff6600" position="0 -1.5 0" rotation="180 0 0" visible="false"></a-entity>
+            </a-entity>
+        </a-entity>
+        
+        <a-entity id="camera-rig">
+            <a-entity id="camera-offset" position="0 5 15">
+                <a-camera look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
+            </a-entity>
+        </a-entity>
+
+        <a-light type="directional" position="1 10 5" intensity="0.8"></a-light>
+        <a-light type="ambient" intensity="0.4"></a-light>
+    </a-scene>
+
+    <script>
+        const DATA = {
+            'capsule': {h:40, h3:1.5, cost:200, fuel:0, col:'#fff'},
+            'rover_fairing': {h:30, h3:1.5, cost:1000, fuel:0, col:'#ccc'},
+            'ant_tank': {h:60, h3:2, cost:600, fuel:1000, col:'#f90'},
+            'fuel_tank': {h:60, h3:2, cost:300, fuel:1000, col:'#f90'},
+            'booster': {h:45, h3:1.5, cost:400, fuel:300, col:'#333'},
+            'decoupler': {h:15, h3:0.3, cost:300, fuel:0, col:'#ff0'},
+            'heat_shield': {h:15, h3:0.2, cost:500, fuel:0, col:'#111'},
+            'parachute': {h:20, h3:0.5, cost:400, fuel:0, col:'#f00'}
+        };
+
+        let stack = []; let cash = 10000; let buildY = 0;
+        let pos = {x:0, y:1, z:0}; let vel = {x:0, y:0, z:0};
+        let fuel = 0; let range = 0; let active = false;
+        
+        // ORBIT CAMERA VARIABLES
+        let camRotation = 0;
+        let isSwiping = false;
+        let lastMouseX = 0;
+
+        function scrollMenu(amt) { document.getElementById('parts-menu').scrollBy({ top: amt, behavior: 'smooth' }); }
+
+        function addPart(t) {
+            if(cash < DATA[t].cost) return;
+            cash -= DATA[t].cost;
+            let el = document.createElement('div'); el.className='placed-part';
+            el.style.cssText = `background:${DATA[t].col}; height:${DATA[t].h}px; bottom:${buildY}px`;
+            el.innerText = t.substring(0,6).toUpperCase();
+            document.getElementById('blueprint-area').appendChild(el);
+            stack.push(t); buildY += DATA[t].h;
+            document.getElementById('cash').innerText = cash;
+        }
+
+        function launch() {
+            if(!stack.includes('capsule')) return alert("Need a Capsule!");
+            document.getElementById('build-screen').style.display = 'none';
+            document.getElementById('game-scene').style.display = 'block';
+            document.getElementById('hud').style.display = 'block';
+            range = stack.filter(p => p === 'ant_tank').length * 5000;
+            renderRocket();
+            active = true;
+            loop();
+        }
+
+        function renderRocket() {
+            let v = document.getElementById('visual-stack'); v.innerHTML = '';
+            let y = 0; fuel = 0;
+            stack.forEach(t => {
+                let e = document.createElement('a-entity');
+                e.setAttribute('geometry', `primitive: cylinder; radius: 0.7; height: ${DATA[t].h3}`);
+                e.setAttribute('material', `color: ${DATA[t].col}; metalness: 0.3`);
+                e.setAttribute('position', `0 ${y + DATA[t].h3/2} 0`);
+                if(t === 'rover_fairing') {
+                    e.setAttribute('id', 'fairing');
+                    let r = document.createElement('a-box');
+                    r.setAttribute('scale', '0.4 0.3 0.4'); r.setAttribute('color', 'silver');
+                    r.setAttribute('id', 'rover'); r.setAttribute('visible', 'false');
+                    e.appendChild(r);
+                }
+                v.appendChild(e); y += DATA[t].h3; fuel += DATA[t].fuel;
+            });
+            document.getElementById('s-btn').style.display = stack.includes('decoupler') ? 'block' : 'none';
+            document.getElementById('f-btn').style.display = stack.includes('rover_fairing') ? 'block' : 'none';
+        }
+
+        function openFairing() {
+            let f = document.getElementById('fairing');
+            if(f) { f.setAttribute('opacity', '0.2'); document.getElementById('rover').setAttribute('visible', 'true'); }
+        }
+
+        // SWIPE TO ROTATE LOGIC
+        window.addEventListener('mousedown', (e) => { isSwiping = true; lastMouseX = e.clientX; });
+        window.addEventListener('mousemove', (e) => {
+            if(!isSwiping) return;
+            let delta = e.clientX - lastMouseX;
+            camRotation -= delta * 0.5;
+            lastMouseX = e.clientX;
+        });
+        window.addEventListener('mouseup', () => isSwiping = false);
+        // Mobile Touch
+        window.addEventListener('touchstart', (e) => { isSwiping = true; lastMouseX = e.touches[0].clientX; });
+        window.addEventListener('touchmove', (e) => {
+            if(!isSwiping) return;
+            let delta = e.touches[0].clientX - lastMouseX;
+            camRotation -= delta * 0.5;
+            lastMouseX = e.touches[0].clientX;
+        });
+        window.addEventListener('touchend', () => isSwiping = false);
+
+        function loop() {
+            if(!active) return;
+            let thrusting = document.getElementById('fire-btn').dataset.pressed === 'true';
+            
+            if(thrusting && fuel > 0) { 
+                vel.y += 0.07; fuel--; 
+                document.getElementById('flame').setAttribute('visible', true); 
+            } else { 
+                document.getElementById('flame').setAttribute('visible', false); 
+            }
+
+            vel.y -= 0.035; // Gravity
+            pos.y += vel.y;
+            if(pos.y < 1) { pos.y = 1; vel.y = 0; }
+
+            // Atmosphere color
+            document.getElementById('sky').setAttribute('color', pos.y > 1500 ? 'black' : '#87CEEB');
+
+            // UPDATE POSITION
+            document.getElementById('player-container').setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+            
+            // UPDATE CAMERA (ORBIT)
+            let rig = document.getElementById('camera-rig');
+            rig.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+            rig.setAttribute('rotation', `0 ${camRotation} 0`);
+
+            // LANDING CAM LOGIC
+            let lCam = document.getElementById('landing-cam-view');
+            if(pos.y < 150 && vel.y < 0) {
+                lCam.style.display = 'block';
+                drawLandingCam();
+            } else {
+                lCam.style.display = 'none';
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        const lCtx = document.getElementById('land-canvas').getContext('2d');
+        function drawLandingCam() {
+            lCtx.fillStyle = '#111'; lCtx.fillRect(0,0,120,120);
+            lCtx.strokeStyle = '#0f0';
+            lCtx.lineWidth = 1;
+            
+            // Draw Ground Target
+            lCtx.beginPath();
+            lCtx.arc(60, 60, Math.max(5, 50 - pos.y/3), 0, Math.PI*2);
+            lCtx.stroke();
+            
+            // Crosshair
+            lCtx.moveTo(60, 50); lCtx.lineTo(60, 70);
+            lCtx.moveTo(50, 60); lCtx.lineTo(70, 60);
+            lCtx.stroke();
+            
+            // Altitude text
+            lCtx.fillStyle = '#0f0';
+            lCtx.font = '10px monospace';
+            lCtx.fillText(`ALT: ${Math.round(pos.y)}m`, 5, 115);
+        }
+
+        // INPUT PRESS DETECTION
+        const fb = document.getElementById('fire-btn');
+        fb.addEventListener('touchstart', (e) => { e.preventDefault(); fb.dataset.pressed = 'true'; });
+        fb.addEventListener('touchend', () => fb.dataset.pressed = 'false');
+        fb.addEventListener('mousedown', () => fb.dataset.pressed = 'true');
+        fb.addEventListener('mouseup', () => fb.dataset.pressed = 'false');
+
+        function addLog(n, m) {
+            let l = document.getElementById('chat-log');
+            l.innerHTML += `<div><b>${n}:</b> ${m}</div>`;
+            l.scrollTop = l.scrollHeight;
+        }
+
+        function sendChat() {
+            let i = document.getElementById('chat-input');
+            if(range <= 0) return addLog('ERR', 'No Antenna!');
+            if(i.value) { addLog('YOU', i.value.replace(/stupid|bad/gi, '****')); i.value = ''; }
+        }
+    </script>
+</body>
+</html>
