@@ -1,30 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder Pro: Orbit & Landing Cam</title>
+    <title>Space Builder Pro: Pilot Edition</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
         
         /* BUILDER UI */
-        #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; }
-        #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #00ff00; }
+        #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; z-index: 100; position: relative; }
+        #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #00ff00; overflow: hidden; }
         
         #menu-container { height: 45%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #444; }
-        .scroll-arrow { height: 40px; background: #222; color: #00ff00; border: none; font-size: 18px; font-weight: bold; }
+        .scroll-arrow { height: 40px; background: #222; color: #00ff00; border: none; font-size: 18px; font-weight: bold; cursor: pointer; }
         #parts-menu { flex-grow: 1; overflow-y: hidden; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; scroll-behavior: smooth; }
         
-        .part-btn { background: #16213e; color: white; border: 1px solid #00ff00; padding: 12px; font-size: 11px; font-weight: bold; border-radius: 4px; }
-        .launch-btn { background: #008000; grid-column: span 2; padding: 15px; border: 2px solid white; font-size: 16px; }
+        .part-btn { background: #16213e; color: white; border: 1px solid #00ff00; padding: 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .launch-btn { background: #008000; grid-column: span 2; padding: 15px; border: 2px solid white; font-size: 16px; color: white; cursor: pointer; }
 
         .placed-part { width: 70px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid white; color: black; font-weight: bold; font-size: 10px; text-align: center; }
 
         /* HUD */
-        #hud { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #hud { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
         .hud-panel { position: absolute; background: rgba(0,0,0,0.8); border: 1px solid #00ff00; padding: 8px; pointer-events: auto; border-radius: 5px; }
         
-        /* CHAT */
         #chat-box { top: 10px; left: 10px; width: 220px; height: 120px; display: flex; flex-direction: column; }
         #chat-log { flex-grow: 1; overflow-y: auto; font-size: 10px; color: #00ff00; font-family: monospace; }
         #chat-input-row { display: flex; gap: 5px; }
@@ -34,12 +33,13 @@
         #landing-cam-view { bottom: 20px; left: 20px; width: 120px; height: 120px; border: 2px solid red; background: #000; display: none; overflow: hidden; }
         #landing-cam-label { position: absolute; top: 0; width: 100%; background: red; color: white; font-size: 9px; text-align: center; }
 
-        #controls-right { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
-        .fire-btn { width: 80px; height: 80px; border-radius: 50%; background: rgba(255,0,0,0.5); border: 3px solid red; color: white; font-weight: bold; }
-        .special-btn { width: 80px; height: 40px; background: #444; border: 1px solid white; color: white; border-radius: 20px; font-size: 10px; display: none; }
+        /* RCS CONTROLS */
+        #rcs-pad { position: absolute; bottom: 20px; left: 160px; display: grid; grid-template-columns: 40px 40px 40px; gap: 5px; pointer-events: auto; }
+        .rcs-btn { width: 40px; height: 40px; background: rgba(0,255,0,0.2); border: 1px solid #00ff00; color: #00ff00; font-weight: bold; }
 
-        /* ORIENTATION HINT */
-        #cam-hint { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #aaa; }
+        #controls-right { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        .fire-btn { width: 80px; height: 80px; border-radius: 50%; background: rgba(255,0,0,0.5); border: 3px solid red; color: white; font-weight: bold; cursor: pointer; }
+        .special-btn { width: 80px; height: 40px; background: #444; border: 1px solid white; color: white; border-radius: 20px; font-size: 10px; display: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -66,18 +66,24 @@
     </div>
 
     <div id="hud">
-        <div id="cam-hint">SWIPE TO ROTATE VIEW</div>
         <div id="chat-box" class="hud-panel">
             <div id="chat-log">SYSTEM: Comms offline.</div>
             <div id="chat-input-row">
                 <input type="text" id="chat-input" placeholder="Radio msg...">
-                <button onclick="sendChat()" style="background:#00ff00; border:none; font-weight:bold;">SEND</button>
+                <button onclick="sendChat()" style="background:#00ff00; border:none; font-weight:bold; cursor:pointer;">SEND</button>
             </div>
         </div>
 
         <div id="landing-cam-view" class="hud-panel">
             <div id="landing-cam-label">LANDING CAM</div>
             <canvas id="land-canvas" width="120" height="120"></canvas>
+        </div>
+
+        <div id="rcs-pad">
+            <button class="rcs-btn" onmousedown="rcs('z',-0.05)" onmouseup="rcs('z',0)">W</button>
+            <button class="rcs-btn" onmousedown="rcs('x',-0.05)" onmouseup="rcs('x',0)">A</button>
+            <button class="rcs-btn" onmousedown="rcs('x',0.05)" onmouseup="rcs('x',0)">D</button>
+            <button class="rcs-btn" onmousedown="rcs('z',0.05)" onmouseup="rcs('z',0)">S</button>
         </div>
         
         <div id="controls-right">
@@ -87,9 +93,8 @@
         </div>
     </div>
 
-    <a-scene id="game-scene" style="display:none" shadow="type: pcfsoft">
+    <a-scene id="game-scene" style="display:none">
         <a-sky id="sky" color="#87CEEB"></a-sky>
-        
         <a-cylinder id="ground" position="0 -1 0" radius="100" height="2" color="#333"></a-cylinder>
         <a-cylinder position="0 -5 0" radius="2000" height="4" color="#004488"></a-cylinder>
 
@@ -105,9 +110,6 @@
                 <a-camera look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
             </a-entity>
         </a-entity>
-
-        <a-light type="directional" position="1 10 5" intensity="0.8"></a-light>
-        <a-light type="ambient" intensity="0.4"></a-light>
     </a-scene>
 
     <script>
@@ -125,11 +127,7 @@
         let stack = []; let cash = 10000; let buildY = 0;
         let pos = {x:0, y:1, z:0}; let vel = {x:0, y:0, z:0};
         let fuel = 0; let range = 0; let active = false;
-        
-        // ORBIT CAMERA VARIABLES
-        let camRotation = 0;
-        let isSwiping = false;
-        let lastMouseX = 0;
+        let camRotation = 0; let isSwiping = false; let lastMouseX = 0;
 
         function scrollMenu(amt) { document.getElementById('parts-menu').scrollBy({ top: amt, behavior: 'smooth' }); }
 
@@ -161,44 +159,24 @@
             stack.forEach(t => {
                 let e = document.createElement('a-entity');
                 e.setAttribute('geometry', `primitive: cylinder; radius: 0.7; height: ${DATA[t].h3}`);
-                e.setAttribute('material', `color: ${DATA[t].col}; metalness: 0.3`);
+                e.setAttribute('material', `color: ${DATA[t].col}`);
                 e.setAttribute('position', `0 ${y + DATA[t].h3/2} 0`);
-                if(t === 'rover_fairing') {
-                    e.setAttribute('id', 'fairing');
-                    let r = document.createElement('a-box');
-                    r.setAttribute('scale', '0.4 0.3 0.4'); r.setAttribute('color', 'silver');
-                    r.setAttribute('id', 'rover'); r.setAttribute('visible', 'false');
-                    e.appendChild(r);
-                }
                 v.appendChild(e); y += DATA[t].h3; fuel += DATA[t].fuel;
             });
             document.getElementById('s-btn').style.display = stack.includes('decoupler') ? 'block' : 'none';
             document.getElementById('f-btn').style.display = stack.includes('rover_fairing') ? 'block' : 'none';
         }
 
-        function openFairing() {
-            let f = document.getElementById('fairing');
-            if(f) { f.setAttribute('opacity', '0.2'); document.getElementById('rover').setAttribute('visible', 'true'); }
-        }
+        function rcs(axis, val) { vel[axis] += val; }
 
-        // SWIPE TO ROTATE LOGIC
+        // SWIPE TO ROTATE
         window.addEventListener('mousedown', (e) => { isSwiping = true; lastMouseX = e.clientX; });
         window.addEventListener('mousemove', (e) => {
             if(!isSwiping) return;
-            let delta = e.clientX - lastMouseX;
-            camRotation -= delta * 0.5;
+            camRotation -= (e.clientX - lastMouseX) * 0.5;
             lastMouseX = e.clientX;
         });
         window.addEventListener('mouseup', () => isSwiping = false);
-        // Mobile Touch
-        window.addEventListener('touchstart', (e) => { isSwiping = true; lastMouseX = e.touches[0].clientX; });
-        window.addEventListener('touchmove', (e) => {
-            if(!isSwiping) return;
-            let delta = e.touches[0].clientX - lastMouseX;
-            camRotation -= delta * 0.5;
-            lastMouseX = e.touches[0].clientX;
-        });
-        window.addEventListener('touchend', () => isSwiping = false);
 
         function loop() {
             if(!active) return;
@@ -212,28 +190,17 @@
             }
 
             vel.y -= 0.035; // Gravity
-            pos.y += vel.y;
-            if(pos.y < 1) { pos.y = 1; vel.y = 0; }
+            pos.y += vel.y; pos.x += vel.x; pos.z += vel.z;
+            if(pos.y < 1) { pos.y = 1; vel.y = 0; vel.x *= 0.8; vel.z *= 0.8; }
 
-            // Atmosphere color
-            document.getElementById('sky').setAttribute('color', pos.y > 1500 ? 'black' : '#87CEEB');
-
-            // UPDATE POSITION
             document.getElementById('player-container').setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-            
-            // UPDATE CAMERA (ORBIT)
             let rig = document.getElementById('camera-rig');
             rig.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
             rig.setAttribute('rotation', `0 ${camRotation} 0`);
 
-            // LANDING CAM LOGIC
             let lCam = document.getElementById('landing-cam-view');
-            if(pos.y < 150 && vel.y < 0) {
-                lCam.style.display = 'block';
-                drawLandingCam();
-            } else {
-                lCam.style.display = 'none';
-            }
+            if(pos.y < 150 && vel.y < 0) { lCam.style.display = 'block'; drawLandingCam(); } 
+            else { lCam.style.display = 'none'; }
 
             requestAnimationFrame(loop);
         }
@@ -242,41 +209,21 @@
         function drawLandingCam() {
             lCtx.fillStyle = '#111'; lCtx.fillRect(0,0,120,120);
             lCtx.strokeStyle = '#0f0';
-            lCtx.lineWidth = 1;
-            
-            // Draw Ground Target
-            lCtx.beginPath();
-            lCtx.arc(60, 60, Math.max(5, 50 - pos.y/3), 0, Math.PI*2);
-            lCtx.stroke();
-            
-            // Crosshair
-            lCtx.moveTo(60, 50); lCtx.lineTo(60, 70);
-            lCtx.moveTo(50, 60); lCtx.lineTo(70, 60);
-            lCtx.stroke();
-            
-            // Altitude text
-            lCtx.fillStyle = '#0f0';
-            lCtx.font = '10px monospace';
+            lCtx.beginPath(); lCtx.arc(60, 60, Math.max(5, 50 - pos.y/3), 0, Math.PI*2); lCtx.stroke();
             lCtx.fillText(`ALT: ${Math.round(pos.y)}m`, 5, 115);
         }
 
-        // INPUT PRESS DETECTION
         const fb = document.getElementById('fire-btn');
-        fb.addEventListener('touchstart', (e) => { e.preventDefault(); fb.dataset.pressed = 'true'; });
-        fb.addEventListener('touchend', () => fb.dataset.pressed = 'false');
         fb.addEventListener('mousedown', () => fb.dataset.pressed = 'true');
         fb.addEventListener('mouseup', () => fb.dataset.pressed = 'false');
-
-        function addLog(n, m) {
-            let l = document.getElementById('chat-log');
-            l.innerHTML += `<div><b>${n}:</b> ${m}</div>`;
-            l.scrollTop = l.scrollHeight;
-        }
+        fb.addEventListener('touchstart', (e) => { e.preventDefault(); fb.dataset.pressed = 'true'; });
+        fb.addEventListener('touchend', () => fb.dataset.pressed = 'false');
 
         function sendChat() {
+            let l = document.getElementById('chat-log');
             let i = document.getElementById('chat-input');
-            if(range <= 0) return addLog('ERR', 'No Antenna!');
-            if(i.value) { addLog('YOU', i.value.replace(/stupid|bad/gi, '****')); i.value = ''; }
+            if(range <= 0) l.innerHTML += "<div><b>ERR:</b> No Antenna</div>";
+            else if(i.value) { l.innerHTML += `<div><b>YOU:</b> ${i.value}</div>`; i.value = ''; }
         }
     </script>
 </body>
