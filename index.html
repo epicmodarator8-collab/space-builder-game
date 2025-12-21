@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Into the Stars</title>
+    <title>Space Builder: Repair Station</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -22,28 +22,27 @@
 
         /* Flight UI */
         #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; }
-        #alt-meter { background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #0f0; border-radius: 5px; font-size: 20px; color: #0f0; font-weight: bold; margin-bottom: 10px; }
+        .meter { background: rgba(0,0,0,0.8); padding: 5px 15px; border: 2px solid #0f0; border-radius: 5px; font-size: 18px; color: #0f0; font-weight: bold; margin-bottom: 5px; width: 220px; text-align: center; }
+        #msg { color: #55f; font-weight: bold; height: 20px; text-shadow: 0 0 5px #000; }
         #deploy-btn { background: #d00; color: white; border: 3px solid white; padding: 10px 20px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; }
 
         #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
-        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; outline: none; }
         
-        .switch-container { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .thrust-switch { appearance: none; width: 60px; height: 100px; background: #444; border: 4px solid #fff; border-radius: 10px; position: relative; cursor: pointer; }
         .thrust-switch:checked { background: #ff4500; }
         .thrust-switch::after { content: ''; position: absolute; top: 5px; left: 5px; width: 42px; height: 40px; background: #eee; border-radius: 5px; transition: 0.2s; }
         .thrust-switch:checked::after { transform: translateY(42px); }
 
-        /* Builder Visuals */
         .placed-part { width: 120px; margin: 0 auto; color: white; font-weight: bold; font-size: 9px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); background: #333; }
         .bp-parachute { border-radius: 50px 50px 0 0; background: #d00; width: 60px; height: 30px !important; }
-        .bp-shield { height: 12px !important; background: #ff6600 !important; border-color: #fff; }
+        .bp-shield { height: 12px !important; background: #ff6600 !important; }
     </style>
 </head>
 <body>
 
     <div id="build-screen">
-        <div id="budget-display" style="padding:15px; color:#0f0; font-size:22px; font-weight:bold;">BUDGET: $<span id="cash">10000</span></div>
+        <div style="padding:15px; color:#0f0; font-size:22px; font-weight:bold;">BUDGET: $<span id="cash">10000</span></div>
         <div id="blueprint-area"><div id="rocket-container" style="display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 20px;"></div></div>
         
         <div id="menu-container">
@@ -56,13 +55,15 @@
     </div>
 
     <div id="flight-ui">
-        <div id="alt-meter">ALTITUDE: 0m</div>
+        <div class="meter" id="alt-meter">ALTITUDE: 0m</div>
+        <div class="meter" id="vel-meter">VELOCITY: 0m/s</div>
+        <div id="msg"></div>
         <button id="deploy-btn" onclick="deployParachute()">DEPLOY PARACHUTE</button>
     </div>
 
     <div id="flight-controls">
         <button class="move-btn" onmousedown="isLeft=true" onmouseup="isLeft=false" ontouchstart="isLeft=true" ontouchend="isLeft=false">◀</button>
-        <div class="switch-container">
+        <div style="display:flex; flex-direction:column; align-items:center;">
             <input type="checkbox" id="t-switch" class="thrust-switch" onchange="toggleThrust(this)">
             <span style="font-weight:bold;">THRUST</span>
         </div>
@@ -71,17 +72,15 @@
 
     <a-scene id="game-scene" style="display:none">
         <a-sky id="sky" color="#87CEEB"></a-sky>
-
-        <a-entity id="stars" visible="false">
-            <a-star-system count="2000" radius="250" depth="0"></a-star-system>
-        </a-entity>
-
+        <a-entity id="stars" visible="false"><a-star-system></a-star-system></a-entity>
+        
         <a-circle position="0 0 0" rotation="-90 0 0" radius="200" color="#228B22"></a-circle>
-        <a-plane position="0 -0.5 -250" rotation="-90 0 0" width="1000" height="500" color="#0000FF"></a-plane>
         <a-box position="0 0.05 0" width="12" height="0.1" depth="12" color="#555"></a-box>
-
-        <a-entity id="moon-rig" position="0 40 0" animation="property: rotation; to: 0 360 0; dur: 30000; easing: linear; loop: true">
-            <a-sphere position="120 0 0" radius="8" color="#DDD"></a-sphere>
+        
+        <a-entity id="repair-station" position="15 0.1 0">
+            <a-cylinder radius="4" height="0.2" color="#00f" opacity="0.4"></a-cylinder>
+            <a-text value="REPAIR ZONE" align="center" position="0 3 0" color="#55f" scale="2 2 2"></a-text>
+            <a-light type="point" color="#00f" intensity="0.8" position="0 2 0"></a-light>
         </a-entity>
 
         <a-entity id="rocket-group" position="0 0.1 0">
@@ -109,7 +108,7 @@
             ]
         ];
 
-        let stack = [], cash = 10000, currentPage = 0;
+        let stack = [], graveyard = [], cash = 10000, currentPage = 0;
         let isThrusting = false, isLeft = false, isRight = false, paraDeployed = false, hasParachute = false;
         let vY = 0, vX = 0, posX = 0, posY = 0.1, rotation = 0;
 
@@ -136,7 +135,7 @@
             el.innerText = p.name.toUpperCase();
             document.getElementById('rocket-container').appendChild(el);
             document.getElementById('cash').innerText = cash;
-            stack.push(p);
+            stack.push({...p, id: 'p' + Math.random()});
             if(p.type === 'parachute') hasParachute = true;
         }
 
@@ -146,22 +145,16 @@
             document.getElementById('rocket-container').lastChild.remove();
             cash += last.cost;
             document.getElementById('cash').innerText = cash;
-            if(last.type === 'parachute') hasParachute = false;
         }
 
-        function goToLaunchpad() {
-            if (stack.length === 0) return;
-            document.getElementById('build-screen').style.display = 'none';
-            document.getElementById('game-scene').style.display = 'block';
-            document.getElementById('flight-controls').style.display = 'flex';
-            document.getElementById('flight-ui').style.display = 'flex';
-            
+        function buildRocketVisuals() {
             const v = document.getElementById('visual-stack');
+            v.innerHTML = "";
             let currentH = 0;
             stack.forEach(p => {
                 const e = document.createElement('a-entity');
+                e.setAttribute('id', p.id);
                 if (p.type === 'parachute') {
-                    e.setAttribute('id', 'chute-mesh');
                     e.setAttribute('geometry', { primitive: 'sphere', radius: 0.8, phiLength: 180, thetaLength: 90 });
                     e.setAttribute('rotation', '90 0 0');
                 } else {
@@ -172,6 +165,15 @@
                 currentH += p.h;
                 v.appendChild(e);
             });
+        }
+
+        function goToLaunchpad() {
+            if (stack.length === 0) return;
+            document.getElementById('build-screen').style.display = 'none';
+            document.getElementById('game-scene').style.display = 'block';
+            document.getElementById('flight-controls').style.display = 'flex';
+            document.getElementById('flight-ui').style.display = 'flex';
+            buildRocketVisuals();
             physics();
         }
 
@@ -184,14 +186,16 @@
         function deployParachute() {
             if (!hasParachute) return;
             paraDeployed = !paraDeployed;
-            const chute = document.getElementById('chute-mesh');
-            const btn = document.getElementById('deploy-btn');
+            const chuteData = stack.find(p => p.type === 'parachute');
+            if (!chuteData) return;
+            const chute = document.getElementById(chuteData.id);
+            if (!chute) return;
             if (paraDeployed) {
                 chute.setAttribute('animation', "property: scale; to: 4 4 4; dur: 800");
-                btn.innerText = "CUT PARACHUTE";
+                document.getElementById('deploy-btn').innerText = "CUT PARACHUTE";
             } else {
                 chute.setAttribute('scale', '1 1 1');
-                btn.innerText = "DEPLOY PARACHUTE";
+                document.getElementById('deploy-btn').innerText = "DEPLOY PARACHUTE";
             }
         }
 
@@ -201,55 +205,69 @@
             document.getElementById('rocket-body').setAttribute('rotation', `0 0 ${rotation}`);
 
             let rad = rotation * (Math.PI / 180);
-            let gravity = -0.002;
-            
             if (isThrusting) {
-                vX += Math.sin(-rad) * 0.006;
-                vY += Math.cos(rad) * 0.006;
+                vX += Math.sin(-rad) * 0.007;
+                vY += Math.cos(rad) * 0.007;
             } else {
-                vY += gravity;
+                vY -= 0.0025;
             }
 
             if (paraDeployed && vY < 0) vY *= 0.85;
-
             vX *= 0.99;
             posX += vX;
-            posY = Math.max(0.1, posY + vY);
-            
-            if (posY <= 0.1) { vY = 0; vX = 0; }
+            posY += vY;
+
+            let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
+
+            // Ground Collision
+            if (posY <= 0.1) {
+                if (vel > 80 && stack.length > 0) {
+                    const destroyed = stack.shift();
+                    graveyard.push(destroyed);
+                    if (destroyed.name === "Capsule") { alert("GAME OVER: CAPSULE DESTROYED!"); location.reload(); }
+                    buildRocketVisuals();
+                    posY = 0.5; vY = Math.abs(vY) * 0.2;
+                } else {
+                    posY = 0.1; vY = 0; vX = 0;
+                }
+            }
+
+            // Repair Logic
+            const distToRepair = Math.abs(posX - 15);
+            if (distToRepair < 3 && posY < 0.5 && graveyard.length > 0) {
+                if (cash >= 500) {
+                    cash -= 500;
+                    stack.unshift(graveyard.pop());
+                    buildRocketVisuals();
+                    document.getElementById('msg').innerText = "PART REPAIRED! -$500";
+                    setTimeout(() => document.getElementById('msg').innerText = "", 2000);
+                } else {
+                    document.getElementById('msg').innerText = "NEED $500 TO REPAIR";
+                }
+            }
 
             document.getElementById('rocket-group').setAttribute('position', `${posX} ${posY} 0`);
             document.getElementById('cam').setAttribute('position', `${posX} ${posY + 5} 25`);
-            
-            let altitude = Math.round(posY * 100);
-            document.getElementById('alt-meter').innerText = `ALTITUDE: ${altitude}m`;
+            document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY * 100)}m`;
+            const vEl = document.getElementById('vel-meter');
+            vEl.innerText = `VELOCITY: ${Math.round(vel)}m/s`;
+            vEl.style.color = vel > 80 ? "#f00" : "#0f0";
 
-            if (hasParachute && altitude > 50) document.getElementById('deploy-btn').style.display = 'block';
-
-            // Atmosphere Transition
+            if (hasParachute && posY > 0.5) document.getElementById('deploy-btn').style.display = 'block';
             let skyVal = Math.max(0, 135 - (posY / 2)); 
             document.getElementById('sky').setAttribute('color', `rgb(${skyVal},${skyVal+50},${skyVal+100})`);
-            
-            // Show stars when high enough
-            if (posY > 150) {
-                document.getElementById('stars').setAttribute('visible', 'true');
-            }
+            if (posY > 150) document.getElementById('stars').setAttribute('visible', 'true');
 
             requestAnimationFrame(physics);
         }
 
-        // Register custom star component for A-Frame
         AFRAME.registerComponent('star-system', {
-            schema: { count: {type: 'int', default: 1000}, radius: {type: 'number', default: 200} },
             init: function () {
                 const geom = new THREE.BufferGeometry();
-                const vertices = [];
-                for (let i = 0; i < this.data.count; i++) {
-                    vertices.push(THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000));
-                }
-                geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-                const mat = new THREE.PointsMaterial({color: 0xFFFFFF, size: 0.5});
-                this.el.setObject3D('mesh', new THREE.Points(geom, mat));
+                const verts = [];
+                for (let i = 0; i < 2000; i++) verts.push(THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000));
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+                this.el.setObject3D('mesh', new THREE.Points(geom, new THREE.PointsMaterial({color: 0xFFFFFF, size: 0.5})));
             }
         });
 
