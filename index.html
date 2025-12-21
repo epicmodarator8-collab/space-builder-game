@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Sketch Edition</title>
+    <title>Space Builder: Sunlight Edition</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -15,10 +15,12 @@
         #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; align-content: center; }
         .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; }
 
-        #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; }
+        #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; z-index: 300; }
         .meter { background: rgba(0,0,0,0.8); padding: 5px 15px; border: 2px solid #0f0; border-radius: 5px; font-size: 18px; color: #0f0; font-weight: bold; margin-bottom: 5px; width: 220px; text-align: center; }
         #msg { color: #55f; font-weight: bold; height: 20px; text-shadow: 0 0 5px #000; }
-        #deploy-btn { background: #d00; color: white; border: 3px solid white; padding: 10px 20px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; }
+        
+        /* Updated Button: Visible and clickable */
+        #deploy-btn { background: #d00; color: white; border: 3px solid white; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; margin-top: 10px; box-shadow: 0 0 10px #000; }
 
         #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
         .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; outline: none; }
@@ -61,26 +63,29 @@
         <button class="move-btn" onmousedown="isRight=true" onmouseup="isRight=false" ontouchstart="isRight=true" ontouchend="isRight=false">▶</button>
     </div>
 
-    <a-scene id="game-scene" style="display:none" renderer="colorManagement: true;">
-        <a-entity light="type: ambient; intensity: 0.6;"></a-entity>
-        <a-entity light="type: directional; intensity: 0.8; position: -5 10 5"></a-entity>
+    <a-scene id="game-scene" style="display:none" renderer="colorManagement: true; physicallyCorrectLights: true;">
+        <a-entity light="type: ambient; intensity: 0.3; color: #444;"></a-entity>
+        <a-entity light="type: directional; intensity: 2.5; castShadow: true; color: #FFFACD;" position="-100 300 -100"></a-entity>
 
         <a-sky id="sky" color="#87CEEB"></a-sky>
         <a-entity id="stars" visible="false"><a-star-system></a-star-system></a-entity>
         
-        <a-sphere position="-80 300 -100" radius="25" color="#FFD700" material="emissive: #FFA500; emissiveIntensity: 0.8"></a-sphere>
+        <a-sphere position="-100 300 -100" radius="30" color="#FDB813" material="shader: flat; emissive: #FDB813; emissiveIntensity: 1"></a-sphere>
         
-        <a-sphere position="60 800 -50" radius="15" color="#DDDDDD"></a-sphere>
+        <a-entity id="moon-orbit-rig" rotation="0 0 0">
+            <a-sphere position="0 600 -200" radius="20" color="#CCCCCC" material="roughness: 1"></a-sphere>
+        </a-entity>
 
-        <a-circle position="0 0 0" rotation="-90 0 0" radius="500" color="#228B22"></a-circle>
+        <a-circle position="0 0 0" rotation="-90 0 0" radius="800" color="#228B22"></a-circle>
         
         <a-cylinder position="0 0.2 0" radius="6" height="0.4" color="#555555"></a-cylinder>
 
         <a-entity id="repair-station" position="20 0 0">
             <a-box width="8" height="10" depth="6" color="#999999" position="0 5 0"></a-box>
             <a-box width="3" height="4" depth="0.2" color="#444444" position="0 2 3.1"></a-box>
-            <a-box width="0.1" height="4" depth="0.3" color="#000" position="0 2 3.1"></a-box> <a-box width="7" height="2" depth="0.5" color="#eeeeee" position="0 8 3"></a-box>
-            <a-text value="REPAIR" align="center" position="0 8 3.3" color="#cc0000" scale="3 3 3" font="exo2bold"></a-text>
+            <a-box width="0.1" height="4" depth="0.3" color="#000" position="0 2 3.1"></a-box>
+            <a-box width="7" height="2" depth="0.5" color="#eeeeee" position="0 8 3"></a-box>
+            <a-text value="REPAIR" align="center" position="0 8 3.3" color="#cc0000" scale="3 3 3"></a-text>
         </a-entity>
 
         <a-entity id="rocket-group" position="0 0.4 0">
@@ -98,17 +103,12 @@
     <script>
         const PART_PAGES = [
             [
-                // CAPSULE: Cone with a window (based on sketch)
                 {name: 'Capsule', cost: 200, type: 'capsule', color: '#DDDDDD', h: 2},
-                // PARACHUTE: Red triangle/cone (based on sketch)
                 {name: 'Parachute', cost: 150, type: 'parachute', color: '#ff0000', h: 0.8},
-                // FUEL TANK: Tall cylinder
                 {name: 'Fuel Tank', cost: 300, type: 'tank', color: '#ff9900', h: 3}
             ],
             [
-                // BOOSTER: Nozzle shape (based on sketch)
                 {name: 'Booster', cost: 400, type: 'booster', color: '#333333', h: 2.5},
-                // HEAT SHIELD: Disc (based on sketch)
                 {name: 'Heat Shield', cost: 200, type: 'shield', color: '#ff6600', h: 0.3},
                 {name: 'Decoupler', cost: 100, type: 'cylinder', color: '#222222', h: 0.4}
             ]
@@ -117,6 +117,7 @@
         let stack = [], graveyard = [], cash = 10000, currentPage = 0;
         let isThrusting = false, isLeft = false, isRight = false, paraDeployed = false, hasParachute = false;
         let vY = 0, vX = 0, posX = 0, posY = 0.4, rotation = 0;
+        let moonAngle = 0;
 
         function renderParts() {
             const grid = document.getElementById('parts-grid');
@@ -151,81 +152,56 @@
             document.getElementById('rocket-container').lastChild.remove();
             cash += last.cost;
             document.getElementById('cash').innerText = cash;
+            // Check if we removed the parachute
+            hasParachute = stack.some(part => part.type === 'parachute');
         }
 
-        // --- NEW VISUAL BUILDER (Mimics Sketches) ---
         function buildRocketVisuals() {
             const v = document.getElementById('visual-stack');
             v.innerHTML = "";
             let currentH = 0;
-            
             stack.forEach(p => {
                 const container = document.createElement('a-entity');
                 container.setAttribute('id', p.id);
                 container.setAttribute('position', '0 ' + (currentH + (p.h/2)) + ' 0');
 
                 if (p.type === 'capsule') {
-                    // Body
                     const body = document.createElement('a-cone');
                     body.setAttribute('height', p.h);
                     body.setAttribute('radius-bottom', 1);
                     body.setAttribute('radius-top', 0);
                     body.setAttribute('color', p.color);
                     container.appendChild(body);
-                    
-                    // Door/Window (Sketch Detail)
                     const door = document.createElement('a-box');
                     door.setAttribute('color', '#333');
-                    door.setAttribute('width', 0.4);
-                    door.setAttribute('height', 0.8);
-                    door.setAttribute('depth', 0.1);
-                    door.setAttribute('position', '0 -0.2 0.8'); // Pop out slightly
-                    door.setAttribute('rotation', '-15 0 0'); // Match slope
+                    door.setAttribute('width', 0.4); door.setAttribute('height', 0.8); door.setAttribute('depth', 0.1);
+                    door.setAttribute('position', '0 -0.2 0.8'); door.setAttribute('rotation', '-15 0 0');
                     container.appendChild(door);
-
                 } else if (p.type === 'parachute') {
-                    // Closed state (Triangle)
                     const pack = document.createElement('a-cone');
                     pack.setAttribute('height', p.h);
-                    pack.setAttribute('radius-bottom', 0.5);
-                    pack.setAttribute('radius-top', 0.1);
+                    pack.setAttribute('radius-bottom', 0.5); pack.setAttribute('radius-top', 0.1);
                     pack.setAttribute('color', p.color);
                     container.appendChild(pack);
-
                 } else if (p.type === 'booster') {
-                    // Engine Nozzle Shape (Wide bottom, narrow top)
                     const nozzle = document.createElement('a-cone');
                     nozzle.setAttribute('height', p.h);
-                    nozzle.setAttribute('radius-bottom', 1.2); // Flared out
-                    nozzle.setAttribute('radius-top', 0.8);
+                    nozzle.setAttribute('radius-bottom', 1.2); nozzle.setAttribute('radius-top', 0.8);
                     nozzle.setAttribute('color', p.color);
                     container.appendChild(nozzle);
-
                 } else if (p.type === 'shield') {
-                    // Heat Shield Disc
                     const disc = document.createElement('a-cylinder');
-                    disc.setAttribute('height', p.h);
-                    disc.setAttribute('radius', 1.1);
-                    disc.setAttribute('color', p.color);
+                    disc.setAttribute('height', p.h); disc.setAttribute('radius', 1.1); disc.setAttribute('color', p.color);
                     container.appendChild(disc);
-
                 } else if (p.type === 'tank') {
-                    // Fuel Tank with "Bolts" (simulated by color bands or just cylinder)
                     const tank = document.createElement('a-cylinder');
-                    tank.setAttribute('height', p.h);
-                    tank.setAttribute('radius', 1);
-                    tank.setAttribute('color', p.color);
+                    tank.setAttribute('height', p.h); tank.setAttribute('radius', 1); tank.setAttribute('color', p.color);
                     container.appendChild(tank);
-                    
                 } else {
-                    // Generic
                     const gen = document.createElement('a-cylinder');
-                    gen.setAttribute('height', p.h);
-                    gen.setAttribute('radius', 1);
-                    gen.setAttribute('color', p.color);
+                    gen.setAttribute('height', p.h); gen.setAttribute('radius', 1); gen.setAttribute('color', p.color);
                     container.appendChild(gen);
                 }
-
                 currentH += p.h;
                 v.appendChild(container);
             });
@@ -255,43 +231,32 @@
             const chuteContainer = document.getElementById(chuteData.id);
             if (!chuteContainer) return;
 
-            // Clear old shape
             chuteContainer.innerHTML = ''; 
 
             if (paraDeployed) {
-                // OPEN STATE: Large Hemisphere
+                // Open Chute Visuals
                 const canopy = document.createElement('a-sphere');
-                canopy.setAttribute('phi-length', 180);
-                canopy.setAttribute('theta-length', 90);
-                canopy.setAttribute('radius', 3);
-                canopy.setAttribute('color', '#ff0000');
-                canopy.setAttribute('rotation', '90 0 0'); // Face down
-                canopy.setAttribute('side', 'double');
+                canopy.setAttribute('phi-length', 180); canopy.setAttribute('theta-length', 90);
+                canopy.setAttribute('radius', 3); canopy.setAttribute('color', '#ff0000');
+                canopy.setAttribute('rotation', '90 0 0'); canopy.setAttribute('side', 'double');
                 canopy.setAttribute('position', '0 1 0');
                 chuteContainer.appendChild(canopy);
-                
-                // Strings
                 const line = document.createElement('a-cylinder');
-                line.setAttribute('height', 1);
-                line.setAttribute('radius', 0.05);
-                line.setAttribute('position', '0 0.5 0');
+                line.setAttribute('height', 1); line.setAttribute('radius', 0.05); line.setAttribute('position', '0 0.5 0');
                 chuteContainer.appendChild(line);
-
                 document.getElementById('deploy-btn').innerText = "CUT PARACHUTE";
             } else {
-                // CLOSED STATE: Triangle Cone
+                // Closed Pack Visuals
                 const pack = document.createElement('a-cone');
-                pack.setAttribute('height', 0.8);
-                pack.setAttribute('radius-bottom', 0.5);
-                pack.setAttribute('radius-top', 0.1);
+                pack.setAttribute('height', 0.8); pack.setAttribute('radius-bottom', 0.5); pack.setAttribute('radius-top', 0.1);
                 pack.setAttribute('color', '#ff0000');
                 chuteContainer.appendChild(pack);
-
                 document.getElementById('deploy-btn').innerText = "DEPLOY PARACHUTE";
             }
         }
 
         function physics() {
+            // Rocket Physics
             if (isLeft) rotation += 1.5;
             if (isRight) rotation -= 1.5;
             document.getElementById('rocket-body').setAttribute('rotation', '0 0 ' + rotation);
@@ -301,28 +266,31 @@
                 vX += Math.sin(-rad) * 0.007;
                 vY += Math.cos(rad) * 0.007;
             } else {
-                vY -= 0.0025;
+                vY -= 0.0025; // Gravity
             }
 
-            if (paraDeployed && vY < 0) vY *= 0.85;
+            // Stronger Air Resistance when Chute is Open
+            if (paraDeployed && vY < 0) vY *= 0.80; // Slows down fall significantly
             vX *= 0.99;
             posX += vX;
             posY += vY;
 
             let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
 
+            // Ground Collision
             if (posY <= 0.4) {
                 if (vel > 80 && stack.length > 0) {
                     const destroyed = stack.shift();
                     graveyard.push(destroyed);
                     if (destroyed.name === "Capsule") { alert("GAME OVER: CAPSULE DESTROYED!"); location.reload(); }
                     buildRocketVisuals();
-                    posY = 1.0; vY = Math.abs(vY) * 0.2;
+                    posY = 1.0; vY = Math.abs(vY) * 0.2; // Bounce slightly
                 } else {
                     posY = 0.4; vY = 0; vX = 0;
                 }
             }
 
+            // Repair Logic
             const distToRepair = Math.abs(posX - 20);
             if (distToRepair < 5 && posY < 1.0 && graveyard.length > 0) {
                 if (cash >= 500) {
@@ -334,6 +302,7 @@
                 }
             }
 
+            // Camera & Scene Updates
             document.getElementById('rocket-group').setAttribute('position', posX + ' ' + posY + ' 0');
             document.getElementById('cam').setAttribute('position', posX + ' ' + (posY + 5) + ' 30');
             document.getElementById('alt-meter').innerText = "ALTITUDE: " + Math.round(posY * 100) + "m";
@@ -341,13 +310,22 @@
             vEl.innerText = "VELOCITY: " + Math.round(vel) + "m/s";
             vEl.style.color = vel > 80 ? "#ff0000" : "#00ff00";
 
-            if (hasParachute && posY > 0.5) document.getElementById('deploy-btn').style.display = 'block';
-            
-            // Sky Color & Celestial Visibility
+            // === PARACHUTE BUTTON LOGIC FIX ===
+            // Show button if we have a parachute AND we are off the ground (Altitude > 1m)
+            if (hasParachute && posY > 1) {
+                document.getElementById('deploy-btn').style.display = 'block';
+            } else {
+                document.getElementById('deploy-btn').style.display = 'none';
+            }
+
+            // Sky, Stars, and Moon Orbit
             let sV = Math.max(0, 135 - (posY / 3)); 
             document.getElementById('sky').setAttribute('color', "rgb(" + Math.round(sV) + "," + Math.round(sV+50) + "," + Math.round(sV+100) + ")");
-            
             if (posY > 150) document.getElementById('stars').setAttribute('visible', 'true');
+            
+            // Orbit Animation
+            moonAngle += 0.05;
+            document.getElementById('moon-orbit-rig').setAttribute('rotation', '0 0 ' + moonAngle);
 
             requestAnimationFrame(physics);
         }
