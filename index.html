@@ -1,153 +1,183 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Orbital Journey</title>
+    <title>Space Builder: Fuel Management</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
         #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; position: relative; z-index: 100; }
-        #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #0f0; cursor: grab; }
-        #menu-container { height: 40%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
-        .top-launch-btn { background: #00ff00; color: #000; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 18px; }
-        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; align-content: center; }
-        .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 11px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 40px; }
-
-        #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; z-index: 300; }
-        .meter { background: rgba(0,0,0,0.8); padding: 4px 12px; border: 2px solid #0f0; border-radius: 5px; font-size: 14px; color: #0f0; font-weight: bold; margin-bottom: 4px; width: 240px; text-align: center; }
-        .bar-container { width: 240px; height: 10px; background: #333; border: 1px solid #fff; margin-bottom: 5px; position: relative; }
-        .bar-fill { height: 100%; width: 100%; transition: width 0.1s; background: #00ccff; }
-        .bar-label { position: absolute; width: 100%; text-align: center; font-size: 9px; font-weight: bold; color: white; top: -1px; }
-
-        #flight-controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
-        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 70px; height: 70px; border-radius: 50%; font-size: 30px; pointer-events: auto; }
-        .thrust-switch { appearance: none; width: 55px; height: 90px; background: #444; border: 3px solid #fff; border-radius: 10px; position: relative; pointer-events: auto; }
-        .thrust-switch:checked { background: #ff4500; }
-        .thrust-switch::after { content: ''; position: absolute; top: 5px; left: 5px; width: 39px; height: 39px; background: #eee; border-radius: 5px; transition: 0.2s; }
-        .thrust-switch:checked::after { transform: translateY(40px); }
+        #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #0f0; display: flex; flex-direction: column-reverse; align-items: center; }
+        #menu-container { height: 60%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
         
-        .flight-btn { background: #d00; color: white; border: 2px solid white; padding: 8px; font-weight: bold; border-radius: 5px; pointer-events: auto; display: none; margin: 3px; }
-        #msg { color: #0f0; font-weight: bold; text-shadow: 2px 2px #000; font-size: 18px; text-align: center; }
+        .top-launch-btn { background: #00ff00; color: #000; padding: 15px; font-weight: bold; cursor: pointer; border: none; font-size: 18px; text-transform: uppercase; }
+        .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 10px; font-weight: bold; cursor: pointer; border: none; font-size: 24px; }
+        
+        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; align-content: center; }
+        .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; }
+
+        #flight-ui { position: absolute; top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 300; display:none; }
+        .meter { background: rgba(0,0,0,0.8); padding: 5px 15px; border: 2px solid #0f0; border-radius: 5px; font-size: 18px; color: #0f0; font-weight: bold; margin-bottom: 5px; width: 220px; text-align: center; }
+        
+        /* Fuel and Heat Bars */
+        .bar-container { width: 220px; height: 12px; background: #333; border: 1px solid #fff; margin-bottom: 5px; position: relative; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.1s; }
+        #fuel-bar { background: #00ccff; }
+        #heat-bar { background: #ff4400; width: 0%; }
+        .bar-label { position: absolute; width: 100%; text-align: center; font-size: 10px; font-weight: bold; color: white; top: -1px; text-shadow: 1px 1px #000; }
+
+        #msg { color: #f55; font-weight: bold; height: 20px; text-shadow: 0 0 5px #000; font-size: 20px; }
+        .flight-btn { background: #d00; color: white; border: 3px solid white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; margin: 5px; }
+
+        #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
+        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; outline: none; }
+        .thrust-switch { appearance: none; width: 60px; height: 100px; background: #444; border: 4px solid #fff; border-radius: 10px; position: relative; cursor: pointer; }
+        .thrust-switch:checked { background: #ff4500; }
+        .thrust-switch::after { content: ''; position: absolute; top: 5px; left: 5px; width: 42px; height: 40px; background: #eee; border-radius: 5px; transition: 0.2s; }
+        .thrust-switch:checked::after { transform: translateY(42px); }
+
+        .placed-part { width: 120px; margin: 0 auto; color: white; font-weight: bold; font-size: 9px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); background: #333; }
     </style>
 </head>
-<body onmousedown="startDrag(event)" onmousemove="doDrag(event)" onmouseup="stopDrag()" ontouchstart="startDrag(event)" ontouchmove="doDrag(event)" ontouchend="stopDrag()">
+<body>
 
     <div id="build-screen">
-        <div style="padding:10px; color:#0f0; font-size:18px;">BUDGET: $<span id="cash">10000</span></div>
-        <div id="blueprint-area">
-            <a-scene embedded style="height: 100%; width: 100%; pointer-events: none;" vr-mode-ui="enabled: false">
-                <a-entity light="type: ambient; intensity: 0.8;"></a-entity>
-                <a-entity id="build-rig"><a-entity id="build-stack" position="0 -2 0"></a-entity></a-entity>
-                <a-camera position="0 0 10" look-controls="enabled: false"></a-camera>
-            </a-scene>
-        </div>
+        <div style="padding:15px; color:#0f0; font-size:22px; font-weight:bold;">BUDGET: $<span id="cash">10000</span></div>
+        <div id="blueprint-area"><div id="rocket-container" style="display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 20px;"></div></div>
+        
         <div id="menu-container">
-            <button class="top-launch-btn" onclick="goToLaunchpad()">🚀 IGNITION</button>
+            <button class="top-launch-btn" onclick="goToLaunchpad()">🚀 GO TO LAUNCHPAD</button>
+            <button class="scroll-nav" onclick="scrollParts(-1)">▲ SCROLL UP</button>
             <div id="parts-grid"></div>
-            <button style="background:#400; color:white; border:none; padding:8px;" onclick="undo()">UNDO</button>
+            <button class="scroll-nav" onclick="scrollParts(1)">▼ SCROLL DOWN</button>
+            <button style="background:#600; color:white; padding:10px; border:none; font-weight:bold;" onclick="undo()">⚠ DELETE LAST PART</button>
         </div>
     </div>
 
     <div id="flight-ui">
-        <div class="meter" id="alt-meter">ALT: 0m</div>
-        <div class="meter" id="vel-meter">VEL: 0m/s</div>
-        <div class="meter" id="nav-meter" style="color: cyan;">MOON: 4000m RIGHT</div>
-        <div class="bar-container"><div id="fuel-bar" class="bar-fill"></div><div class="bar-label">FUEL: <span id="fuel-txt">0</span> gal</div></div>
+        <div class="meter" id="alt-meter">ALTITUDE: 0m</div>
+        <div class="meter" id="vel-meter">VELOCITY: 0m/s</div>
+        
+        <div class="bar-container" id="fuel-ui">
+            <div id="fuel-bar" class="bar-fill"></div>
+            <div class="bar-label">FUEL: <span id="fuel-txt">0</span> gal</div>
+        </div>
+
+        <div class="bar-container" id="heat-ui" style="display:none">
+            <div id="heat-bar" class="bar-fill"></div>
+            <div class="bar-label">HULL HEAT</div>
+        </div>
+
         <div id="msg"></div>
         <button id="decouple-btn" class="flight-btn" onclick="decouple()">DECOUPLE</button>
-        <button id="deploy-btn" class="flight-btn" onclick="deployParachute()">PARACHUTE</button>
+        <button id="deploy-btn" class="flight-btn" onclick="deployParachute()">DEPLOY PARACHUTE</button>
     </div>
 
     <div id="flight-controls">
         <button class="move-btn" onmousedown="isLeft=true" onmouseup="isLeft=false" ontouchstart="isLeft=true" ontouchend="isLeft=false">◀</button>
-        <input type="checkbox" id="t-switch" class="thrust-switch" onchange="toggleThrust(this)">
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <input type="checkbox" id="t-switch" class="thrust-switch" onchange="toggleThrust(this)">
+            <span style="font-weight:bold;">THRUST</span>
+        </div>
         <button class="move-btn" onmousedown="isRight=true" onmouseup="isRight=false" ontouchstart="isRight=true" ontouchend="isRight=false">▶</button>
     </div>
 
-    <a-scene id="game-scene" style="display:none">
+    <a-scene id="game-scene" style="display:none" renderer="colorManagement: true;">
+        <a-entity light="type: ambient; intensity: 0.3; color: #444;"></a-entity>
+        <a-entity light="type: directional; intensity: 2.5; color: #FFFACD;" position="-100 300 -100"></a-entity>
         <a-sky id="sky" color="#87CEEB"></a-sky>
+        <a-entity id="stars" visible="false"><a-star-system></a-star-system></a-entity>
+        <a-sphere position="-100 300 -100" radius="30" color="#FDB813" material="shader: flat; emissive: #FDB813;"></a-sphere>
+        <a-entity id="moon-orbit-rig"><a-sphere position="0 600 -200" radius="20" color="#CCC"></a-sphere></a-entity>
+        <a-circle position="0 -0.1 0" rotation="-90 0 0" radius="2000" color="#1E90FF"></a-circle>
+        <a-circle position="0 0.1 0" rotation="-90 0 0" radius="40" color="#228B22"></a-circle>
+        <a-cylinder position="0 0.3 0" radius="6" height="0.4" color="#555"></a-cylinder>
 
-        <a-sphere position="0 15000 -500" radius="200" color="#FFF" material="shader:flat; emissive:#FFF; emissiveIntensity:5">
-            <a-light type="point" intensity="2" distance="20000"></a-light>
-        </a-sphere>
-
-        <a-entity id="earth-group">
-            <a-circle position="0 -1 0" rotation="-90 0 0" radius="3000" color="#1E90FF"></a-circle>
-            <a-circle position="0 0.1 0" rotation="-90 0 0" radius="50" color="#228B22"></a-circle>
-        </a-entity>
-
-        <a-entity id="moon-group" position="4000 6000 0">
-            <a-sphere radius="150" color="#AAA" material="roughness:1;"></a-sphere>
-            <a-circle rotation="-90 0 0" radius="60" color="#777" position="0 149.5 0"></a-circle>
-        </a-entity>
-
-        <a-entity id="cam-pivot">
-            <a-entity id="rocket-group">
-                <a-entity id="rocket-body">
-                    <a-entity id="flight-stack"></a-entity>
-                    <a-entity id="fire" position="0 -1.5 0" visible="false">
-                        <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2" material="emissive:#ff4500;"></a-cone>
-                    </a-entity>
+        <a-entity id="rocket-group" position="0 0.5 0">
+            <a-entity id="rocket-body">
+                <a-sphere id="heat-aura" radius="2.5" material="shader: flat; color: #ff4500; opacity: 0" visible="false"></a-sphere>
+                <a-entity id="visual-stack"></a-entity>
+                <a-entity id="fire" position="0 -1.5 0" visible="false">
+                    <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2" material="emissive: #ff4500;"></a-cone>
                 </a-entity>
             </a-entity>
-            <a-camera id="cam" position="0 5 25" look-controls="enabled: false"></a-camera>
         </a-entity>
+        <a-camera id="cam" position="0 5 30" look-controls="enabled: false"></a-camera>
     </a-scene>
 
     <script>
-        const PARTS = [
-            {name: 'Capsule', cost: 200, type: 'capsule', color: '#EEE', h: 2},
-            {name: 'Fuel Tank', cost: 300, type: 'tank', color: '#f90', h: 3},
-            {name: 'Booster', cost: 400, type: 'booster', color: '#333', h: 2},
-            {name: 'Parachute', cost: 150, type: 'parachute', color: '#f00', h: 0.8},
-            {name: 'Decoupler', cost: 100, type: 'decoupler', color: '#222', h: 0.4},
-            {name: 'Heat Shield', cost: 200, type: 'shield', color: '#422', h: 0.3}
+        const PART_PAGES = [
+            [
+                {name: 'Capsule', cost: 200, type: 'capsule', color: '#DDDDDD', h: 2},
+                {name: 'Parachute', cost: 150, type: 'parachute', color: '#ff0000', h: 0.8},
+                {name: 'Fuel Tank', cost: 300, type: 'tank', color: '#ff9900', h: 3}
+            ],
+            [
+                {name: 'Booster', cost: 400, type: 'booster', color: '#333333', h: 2.5},
+                {name: 'Heat Shield', cost: 200, type: 'shield', color: '#ff6600', h: 0.3},
+                {name: 'Decoupler', cost: 100, type: 'decoupler', color: '#222222', h: 0.4}
+            ]
         ];
 
-        let stack = [], cash = 10000, isFlying = false;
-        let isDragging = false, lastX = 0, lastY = 0, orbitY = 0, orbitX = 0;
+        let stack = [], cash = 10000, currentPage = 0;
         let isThrusting = false, isLeft = false, isRight = false, paraDeployed = false;
         let vY = 0, vX = 0, posX = 0, posY = 0.5, rotation = 0;
-        let currentFuel = 0, maxFuel = 0, hasEngine = false, hasChute = false;
-
-        function startDrag(e) { isDragging = true; lastX = e.pageX || e.touches[0].pageX; lastY = e.pageY || e.touches[0].pageY; }
-        function stopDrag() { isDragging = false; }
-        function doDrag(e) {
-            if (!isDragging) return;
-            let x = e.pageX || (e.touches ? e.touches[0].pageX : 0);
-            let y = e.pageY || (e.touches ? e.touches[0].pageY : 0);
-            orbitY += (x - lastX) * 0.5;
-            orbitX = Math.max(-40, Math.min(40, orbitX - (y - lastY) * 0.5));
-            if (!isFlying) document.getElementById('build-rig').setAttribute('rotation', `0 ${orbitY} 0`);
-            else document.getElementById('cam-pivot').setAttribute('rotation', `${orbitX} ${orbitY} 0`);
-            lastX = x; lastY = y;
-        }
+        let moonAngle = 0, heatLevel = 0, currentFuel = 0, maxFuel = 0;
+        let hasEngine = false, hasChute = false;
 
         function renderParts() {
-            const grid = document.getElementById('parts-grid');
-            PARTS.forEach(p => {
+            const grid = document.getElementById('parts-grid'); grid.innerHTML = "";
+            PART_PAGES[currentPage].forEach(p => {
                 const btn = document.createElement('button'); btn.className = 'part-btn';
-                btn.innerHTML = `${p.name}<br>$${p.cost}`;
-                btn.onclick = () => { if(cash>=p.cost){cash-=p.cost; stack.push({...p, id:'p'+Math.random()}); updateStacks();} };
-                grid.appendChild(btn);
+                btn.innerHTML = p.name.toUpperCase() + "<br>($" + p.cost + ")";
+                btn.onclick = () => addPart(p); grid.appendChild(btn);
             });
         }
+        function scrollParts(dir) { currentPage = (currentPage + dir + PART_PAGES.length) % PART_PAGES.length; renderParts(); }
 
-        function updateStacks() {
+        function addPart(p) {
+            if (cash < p.cost) return;
+            cash -= p.cost;
+            const el = document.createElement('div'); el.className = 'placed-part';
+            el.style.height = (p.h * 20) + 'px'; el.innerText = p.name.toUpperCase();
+            document.getElementById('rocket-container').appendChild(el);
             document.getElementById('cash').innerText = cash;
-            buildVisuals('build-stack');
+            stack.push({...p, id: 'p' + Math.random().toString(36).substr(2, 9)});
+            checkSystems();
+        }
+
+        function undo() {
+            if (stack.length === 0) return;
+            stack.pop(); document.getElementById('rocket-container').lastChild.remove();
+            checkSystems();
+        }
+
+        function checkSystems() {
             hasChute = stack.some(p => p.type === 'parachute');
             hasEngine = stack.some(p => p.type === 'booster');
             maxFuel = stack.filter(p => p.type === 'tank').length * 50;
-            currentFuel = maxFuel;
+            currentFuel = maxFuel; // Fill tanks in build mode
         }
 
-        function buildVisuals(targetId) {
-            const v = document.getElementById(targetId); v.innerHTML = "";
+        function decouple() {
+            const idx = stack.findIndex(p => p.type === 'decoupler');
+            if (idx !== -1) {
+                stack.splice(0, idx + 1);
+                buildRocketVisuals();
+                checkSystems();
+                // Recalculate fuel based on remaining tanks
+                currentFuel = Math.min(currentFuel, maxFuel);
+                document.getElementById('msg').innerText = "STAGING SUCCESSFUL!";
+                setTimeout(() => document.getElementById('msg').innerText = "", 2000);
+            }
+        }
+
+        function buildRocketVisuals() {
+            const v = document.getElementById('visual-stack'); v.innerHTML = "";
             let currentH = 0;
             stack.forEach(p => {
                 const container = document.createElement('a-entity');
-                container.setAttribute('position', `0 ${currentH + (p.h/2)} 0`);
-                container.setAttribute('id', targetId === 'flight-stack' ? p.id : '');
+                container.setAttribute('position', '0 ' + (currentH + (p.h/2)) + ' 0');
+                container.setAttribute('id', p.id);
                 let shape = (p.type==='capsule'||p.type==='parachute'||p.type==='booster') ? 'a-cone' : 'a-cylinder';
                 const mesh = document.createElement(shape);
                 mesh.setAttribute('height', p.h); mesh.setAttribute('color', p.color);
@@ -160,88 +190,108 @@
 
         function goToLaunchpad() {
             if (stack.length === 0) return;
-            isFlying = true;
             document.getElementById('build-screen').style.display = 'none';
             document.getElementById('game-scene').style.display = 'block';
             document.getElementById('flight-controls').style.display = 'flex';
             document.getElementById('flight-ui').style.display = 'flex';
-            buildVisuals('flight-stack'); physics();
+            buildRocketVisuals(); physics();
         }
 
-        function toggleThrust(el) { if (el.checked && (currentFuel <= 0 || !hasEngine)) { el.checked = false; return; } isThrusting = el.checked; }
-        function decouple() {
-            const idx = stack.findIndex(p => p.type === 'decoupler');
-            if (idx !== -1) { stack.splice(0, idx + 1); buildVisuals('flight-stack'); updateStacks(); currentFuel = Math.min(currentFuel, maxFuel); }
+        function toggleThrust(el) {
+            if (el.checked && currentFuel <= 0) { document.getElementById('msg').innerText = "OUT OF FUEL!"; el.checked = false; return; }
+            if (el.checked && !hasEngine) { document.getElementById('msg').innerText = "NO ENGINE!"; el.checked = false; return; }
+            isThrusting = el.checked;
         }
-        function deployParachute() { if (!hasChute) return; paraDeployed = !paraDeployed; const p = stack.find(x => x.type === 'parachute'); const el = document.getElementById(p.id); if(el) el.setAttribute('scale', paraDeployed ? '5 5 5' : '1 1 1'); }
+
+        function deployParachute() {
+            if (!hasChute) return;
+            paraDeployed = !paraDeployed;
+            const p = stack.find(x => x.type === 'parachute');
+            const el = document.getElementById(p.id);
+            if (paraDeployed) {
+                el.setAttribute('scale', '5 5 5'); el.firstChild.setAttribute('color', '#ffaaaa');
+            } else {
+                el.setAttribute('scale', '1 1 1'); el.firstChild.setAttribute('color', '#ff0000');
+            }
+        }
 
         function physics() {
-            if (isLeft) rotation += 1.8; if (isRight) rotation -= 1.8;
-            document.getElementById('rocket-body').setAttribute('rotation', `0 0 ${rotation}`);
+            if (isLeft) rotation += 1.5; if (isRight) rotation -= 1.5;
+            document.getElementById('rocket-body').setAttribute('rotation', '0 0 ' + rotation);
+
             let rad = rotation * (Math.PI / 180);
-            
-            // Distance to Moon calculation
-            let dx = 4000 - posX;
-            let dy = 6150 - posY;
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            
-            // Thrust
-            if (isThrusting && currentFuel > 0 && hasEngine) {
-                currentFuel -= 0.12;
-                vX += Math.sin(-rad) * 0.008; 
-                vY += Math.cos(rad) * 0.008;
+            let inWater = (Math.abs(posX) > 40 && posY <= 0);
+
+            // --- FUEL LOGIC ---
+            if (isThrusting && currentFuel > 0 && hasEngine && !inWater) {
+                currentFuel -= 0.15; // Fuel burn rate
+                vX += Math.sin(-rad) * 0.007; vY += Math.cos(rad) * 0.007;
                 document.getElementById('fire').setAttribute('visible', true);
             } else {
-                if (isThrusting) { isThrusting = false; document.getElementById('t-switch').checked = false; }
+                if (isThrusting && currentFuel <= 0) {
+                    isThrusting = false;
+                    document.getElementById('t-switch').checked = false;
+                    document.getElementById('msg').innerText = "FUEL DEPLETED!";
+                }
                 document.getElementById('fire').setAttribute('visible', false);
             }
 
-            // Gravity Logic
-            if (dist < 200) { // Moon Influence
-                let angleToMoon = Math.atan2(dy, dx);
-                vX += Math.cos(angleToMoon) * 0.0015;
-                vY += Math.sin(angleToMoon) * 0.0015;
-                if (dist < 152) {
-                    let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
-                    if (vel < 60) { vX = 0; vY = 0; document.getElementById('msg').innerText = "SUCCESS! MOON LANDING!"; }
-                    else { alert("MOON IMPACT: TOO FAST!"); location.reload(); }
-                }
-            } else { // Earth influence
-                vY -= 0.0025;
-                if (posY > 500) { vX *= 0.999; vY *= 0.999; } // Low drag in space
-                else { vX *= 0.99; if (paraDeployed && vY < 0) vY *= 0.8; }
-            }
-
-            posX += vX; posY += vY;
-
-            // Earth Collision
-            if (posY <= 0.5) {
-                let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
-                if (vel > 80 && stack.length > 0) {
-                    stack.shift(); updateStacks(); buildVisuals('flight-stack');
-                    if (stack.length === 0) { alert("DESTROYED!"); location.reload(); }
-                    posY = 1; vY = 0.1;
-                } else { posY = 0.5; vX = 0; vY = 0; }
-            }
-
-            // UI and Camera
-            document.getElementById('cam-pivot').setAttribute('position', `${posX} ${posY} 0`);
+            // UI Bars
             document.getElementById('fuel-bar').style.width = maxFuel > 0 ? (currentFuel / maxFuel * 100) + "%" : "0%";
-            document.getElementById('fuel-txt').innerText = Math.round(currentFuel);
-            document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY*100)}m`;
-            document.getElementById('vel-meter').innerText = `VELOCITY: ${Math.round(Math.sqrt(vX*vX+vY*vY)*1000)}m/s`;
-            document.getElementById('nav-meter').innerText = `MOON DIST: ${Math.round(dist*100)}m`;
+            document.getElementById('fuel-txt').innerText = Math.max(0, Math.round(currentFuel));
 
-            // Atmospheric sky fade
-            let skyB = Math.max(0, 200 - (posY / 5));
-            let skyR = Math.max(0, 135 - (posY / 5));
-            document.getElementById('sky').setAttribute('color', `rgb(${Math.round(skyR)},${Math.round(skyR+30)},${Math.round(skyB)})`);
-            
-            document.getElementById('deploy-btn').style.display = (hasChute && posY > 5 && posY < 1000) ? 'block' : 'none';
+            // --- HEAT LOGIC ---
+            const aura = document.getElementById('heat-aura');
+            if (posY < 150 && posY > 40 && vY < -0.3) {
+                document.getElementById('heat-ui').style.display = 'block';
+                let intensity = Math.abs(vY) * 2;
+                let hasShield = (stack.length > 0 && stack[0].type === 'shield');
+                heatLevel += hasShield ? intensity * 0.1 : intensity * 1.5;
+                aura.setAttribute('visible', true); aura.setAttribute('material', 'opacity', intensity/2);
+                if (heatLevel >= 100) {
+                    const lost = stack.shift(); heatLevel = 50; buildRocketVisuals(); checkSystems();
+                    if(lost.type === 'capsule') { alert("RE-ENTRY FAILURE"); location.reload(); }
+                }
+            } else {
+                heatLevel = Math.max(0, heatLevel - 0.5);
+                if(heatLevel === 0) document.getElementById('heat-ui').style.display = 'none';
+                aura.setAttribute('visible', false);
+            }
+            document.getElementById('heat-bar').style.width = heatLevel + "%";
+
+            // Physics basic
+            if (inWater) { vY += 0.005; vY *= 0.9; vX *= 0.9; if (posY > 0) vY -= 0.006; } 
+            else { vY -= 0.0025; if (paraDeployed && vY < 0) vY *= 0.8; vX *= 0.99; }
+            posX += vX; posY += vY;
+            let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
+
+            if (posY <= (Math.abs(posX)>40?-2:0.5)) {
+                if (vel > (Math.abs(posX)>40?60:80) && stack.length > 0) {
+                    const d = stack.shift(); checkSystems(); buildRocketVisuals();
+                    if(d.type==='capsule') { alert("CRASHED!"); location.reload(); }
+                    posY += 1; vY = Math.abs(vY)*0.3;
+                } else { posY = (Math.abs(posX)>40?-2:0.5); if(!inWater){vX=0;vY=0;} }
+            }
+
+            document.getElementById('rocket-group').setAttribute('position', posX + ' ' + posY + ' 0');
+            document.getElementById('cam').setAttribute('position', posX + ' ' + (posY + 5) + ' 30');
+            document.getElementById('alt-meter').innerText = "ALTITUDE: " + Math.round(posY * 100) + "m";
+            document.getElementById('vel-meter').innerText = "VELOCITY: " + Math.round(vel) + "m/s";
+            document.getElementById('deploy-btn').style.display = (hasChute && posY > 2) ? 'block' : 'none';
             document.getElementById('decouple-btn').style.display = stack.some(p=>p.type==='decoupler') ? 'block' : 'none';
 
+            moonAngle += 0.05; document.getElementById('moon-orbit-rig').setAttribute('rotation', '0 0 ' + moonAngle);
             requestAnimationFrame(physics);
         }
+
+        AFRAME.registerComponent('star-system', {
+            init: function () {
+                const geom = new THREE.BufferGeometry(); const verts = [];
+                for (let i = 0; i < 2000; i++) verts.push(THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000));
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+                this.el.setObject3D('mesh', new THREE.Points(geom, new THREE.PointsMaterial({color: 0xFFFFFF, size: 0.5})));
+            }
+        });
         window.onload = renderParts;
     </script>
 </body>
