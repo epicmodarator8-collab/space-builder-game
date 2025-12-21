@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Map Mode & Orbits</title>
+    <title>Space Builder: Fixed Orbits</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -9,7 +9,7 @@
         #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #0f0; cursor: grab; }
         #menu-container { height: 40%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
         .top-launch-btn { background: #00ff00; color: #000; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 18px; }
-        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; align-content: center; }
+        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; align-content: center; overflow-y: auto; }
         .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 11px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 40px; }
 
         /* Flight UI */
@@ -20,7 +20,7 @@
         .bar-label { position: absolute; width: 100%; text-align: center; font-size: 9px; font-weight: bold; color: white; top: -1px; }
 
         /* Map UI */
-        #map-toggle { position: absolute; top: 20px; right: 20px; background: #444; color: #0f0; border: 2px solid #0f0; padding: 10px; font-weight: bold; cursor: pointer; z-index: 400; display: none; pointer-events: auto; }
+        #map-toggle { position: absolute; top: 20px; right: 20px; background: #222; color: #0f0; border: 2px solid #0f0; padding: 10px; font-weight: bold; cursor: pointer; z-index: 400; display: none; }
         #map-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 250; display: none; }
         #map-canvas { width: 100%; height: 100%; }
 
@@ -48,7 +48,7 @@
         <div id="menu-container">
             <button class="top-launch-btn" onclick="goToLaunchpad()">🚀 IGNITION</button>
             <div id="parts-grid"></div>
-            <button style="background:#400; color:white; border:none; padding:8px;" onclick="undo()">UNDO</button>
+            <button style="background:#400; color:white; border:none; padding:8px; cursor:pointer;" onclick="undo()">UNDO LAST PART</button>
         </div>
     </div>
 
@@ -75,13 +75,18 @@
 
     <a-scene id="game-scene" style="display:none">
         <a-sky id="sky" color="#87CEEB"></a-sky>
+        
+        <a-sphere position="0 15000 0" radius="100" color="yellow" material="shader:flat"></a-sphere>
+
         <a-entity id="earth-group">
             <a-circle position="0 -1 0" rotation="-90 0 0" radius="3000" color="#1E90FF"></a-circle>
             <a-circle position="0 0.1 0" rotation="-90 0 0" radius="50" color="#228B22"></a-circle>
         </a-entity>
+        
         <a-entity id="moon-group" position="4000 6000 0">
             <a-sphere radius="150" color="#AAA"></a-sphere>
         </a-entity>
+
         <a-entity id="cam-pivot">
             <a-entity id="rocket-group">
                 <a-entity id="rocket-body">
@@ -110,11 +115,10 @@
         let vY = 0, vX = 0, posX = 0, posY = 0.5, rotation = 0;
         let currentFuel = 0, maxFuel = 0, hasEngine = false, hasChute = false;
 
-        // Map Canvas setup
         const canvas = document.getElementById('map-canvas');
         const ctx = canvas.getContext('2d');
 
-        function startDrag(e) { isDragging = true; lastX = e.pageX || e.touches[0].pageX; lastY = e.pageY || e.touches[0].pageY; }
+        function startDrag(e) { isDragging = true; lastX = e.pageX || (e.touches ? e.touches[0].pageX : 0); lastY = e.pageY || (e.touches ? e.touches[0].pageY : 0); }
         function stopDrag() { isDragging = false; }
         function doDrag(e) {
             if (!isDragging || isMap) return;
@@ -125,6 +129,14 @@
             if (!isFlying) document.getElementById('build-rig').setAttribute('rotation', `0 ${orbitY} 0`);
             else document.getElementById('cam-pivot').setAttribute('rotation', `${orbitX} ${orbitY} 0`);
             lastX = x; lastY = y;
+        }
+
+        function undo() {
+            if (stack.length > 0) {
+                let p = stack.pop();
+                cash += p.cost;
+                updateStacks();
+            }
         }
 
         function toggleMap() {
@@ -195,7 +207,7 @@
             canvas.height = window.innerHeight;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            let scale = 0.05;
+            let scale = 0.04;
             let center = { x: canvas.width/2 - posX*scale, y: canvas.height/2 + posY*scale };
 
             // Earth
@@ -207,23 +219,22 @@
             ctx.beginPath(); ctx.arc(center.x + 4000*scale, center.y - 6000*scale, 150*scale, 0, Math.PI*2); ctx.fill();
 
             // Orbit Prediction
-            ctx.strokeStyle = "rgba(0, 200, 255, 0.5)";
+            ctx.strokeStyle = "#0f0";
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
             let tx = posX, ty = posY, tvx = vX, tvy = vY;
             ctx.moveTo(canvas.width/2, canvas.height/2);
-            for(let i=0; i<300; i++) {
+            for(let i=0; i<400; i++) {
                 tvy -= 0.0025;
                 tx += tvx; ty += tvy;
                 ctx.lineTo(canvas.width/2 + (tx-posX)*scale, canvas.height/2 - (ty-posY)*scale);
                 if(ty <= 0) break;
             }
             ctx.stroke();
-            ctx.setLineDash([]);
 
-            // Rocket
-            ctx.fillStyle = "#FFF";
-            ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, 5, 0, Math.PI*2); ctx.fill();
+            // Rocket Icon
+            ctx.fillStyle = "#fff";
+            ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, 6, 0, Math.PI*2); ctx.fill();
         }
 
         function physics() {
@@ -233,30 +244,25 @@
             
             if (isThrusting && currentFuel > 0 && hasEngine) {
                 currentFuel -= 0.15;
-                vX += Math.sin(-rad) * 0.01; vY += Math.cos(rad) * 0.01;
+                vX += Math.sin(-rad) * 0.012; vY += Math.cos(rad) * 0.012;
                 document.getElementById('fire').setAttribute('visible', true);
             } else {
                 document.getElementById('fire').setAttribute('visible', false);
             }
 
-            // Gravity & Friction
             vY -= 0.0025;
-            if (posY < 500) { vX *= 0.99; if (paraDeployed && vY < 0) vY *= 0.85; }
+            if (posY < 500) { vX *= 0.995; if (paraDeployed && vY < 0) vY *= 0.85; }
             
             posX += vX; posY += vY;
 
-            // Earth Collision
             if (posY <= 0.5) {
-                let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
-                if (vel > 80 && stack.length > 0) {
-                    stack.shift(); updateStacks(); buildVisuals('flight-stack');
-                    posY = 1; vY = 0.1;
-                } else { posY = 0.5; vX = 0; vY = 0; }
+                if (Math.abs(vY*1000) > 80) { /* Crash logic could go here */ }
+                posY = 0.5; vX = 0; vY = 0;
             }
 
-            // UI
             document.getElementById('cam-pivot').setAttribute('position', `${posX} ${posY} 0`);
             document.getElementById('fuel-bar').style.width = maxFuel > 0 ? (currentFuel / maxFuel * 100) + "%" : "0%";
+            document.getElementById('fuel-txt').innerText = Math.round(currentFuel);
             document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY*100)}m`;
             document.getElementById('vel-meter').innerText = `VELOCITY: ${Math.round(Math.sqrt(vX*vX+vY*vY)*1000)}m/s`;
 
