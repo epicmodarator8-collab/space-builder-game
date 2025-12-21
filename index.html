@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Ocean Edition</title>
+    <title>Space Builder: Re-entry & Decouple</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -17,9 +17,12 @@
 
         #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; z-index: 300; }
         .meter { background: rgba(0,0,0,0.8); padding: 5px 15px; border: 2px solid #0f0; border-radius: 5px; font-size: 18px; color: #0f0; font-weight: bold; margin-bottom: 5px; width: 220px; text-align: center; }
+        #heat-ui { width: 220px; height: 10px; background: #333; border: 1px solid #fff; display: none; margin-bottom: 10px; }
+        #heat-bar { width: 0%; height: 100%; background: orange; transition: width 0.1s; }
         #msg { color: #f55; font-weight: bold; height: 20px; text-shadow: 0 0 5px #000; font-size: 20px; }
         
-        #deploy-btn { background: #d00; color: white; border: 3px solid white; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; margin-top: 10px; box-shadow: 0 0 10px #000; }
+        .flight-btn { background: #d00; color: white; border: 3px solid white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; margin: 5px; box-shadow: 0 0 10px #000; }
+        #decouple-btn { background: #ffaa00; color: #000; }
 
         #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
         .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; outline: none; }
@@ -41,4 +44,42 @@
             <button class="top-launch-btn" onclick="goToLaunchpad()">🚀 GO TO LAUNCHPAD</button>
             <button class="scroll-nav" onclick="scrollParts(-1)">▲ SCROLL UP</button>
             <div id="parts-grid"></div>
-            <button class="scroll-nav" onclick="scrollParts(1)">▼ SC
+            <button class="scroll-nav" onclick="scrollParts(1)">▼ SCROLL DOWN</button>
+            <button style="background:#600; color:white; padding:10px; border:none; font-weight:bold;" onclick="undo()">⚠ DELETE LAST PART</button>
+        </div>
+    </div>
+
+    <div id="flight-ui">
+        <div class="meter" id="alt-meter">ALTITUDE: 0m</div>
+        <div class="meter" id="vel-meter">VELOCITY: 0m/s</div>
+        <div id="heat-ui"><div id="heat-bar"></div></div>
+        <div id="msg"></div>
+        <button id="decouple-btn" class="flight-btn" onclick="decouple()">DECOUPLE</button>
+        <button id="deploy-btn" class="flight-btn" onclick="deployParachute()">DEPLOY PARACHUTE</button>
+    </div>
+
+    <div id="flight-controls">
+        <button class="move-btn" onmousedown="isLeft=true" onmouseup="isLeft=false" ontouchstart="isLeft=true" ontouchend="isLeft=false">◀</button>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <input type="checkbox" id="t-switch" class="thrust-switch" onchange="toggleThrust(this)">
+            <span style="font-weight:bold;">THRUST</span>
+        </div>
+        <button class="move-btn" onmousedown="isRight=true" onmouseup="isRight=false" ontouchstart="isRight=true" ontouchend="isRight=false">▶</button>
+    </div>
+
+    <a-scene id="game-scene" style="display:none" renderer="colorManagement: true;">
+        <a-entity light="type: ambient; intensity: 0.3; color: #444;"></a-entity>
+        <a-entity light="type: directional; intensity: 2.5; color: #FFFACD;" position="-100 300 -100"></a-entity>
+
+        <a-sky id="sky" color="#87CEEB"></a-sky>
+        <a-entity id="stars" visible="false"><a-star-system></a-star-system></a-entity>
+        
+        <a-sphere position="-100 300 -100" radius="30" color="#FDB813" material="shader: flat; emissive: #FDB813;"></a-sphere>
+        <a-entity id="moon-orbit-rig"><a-sphere position="0 600 -200" radius="20" color="#CCC"></a-sphere></a-entity>
+
+        <a-circle position="0 -0.1 0" rotation="-90 0 0" radius="2000" color="#1E90FF"></a-circle>
+        <a-circle position="0 0.1 0" rotation="-90 0 0" radius="40" color="#228B22"></a-circle>
+        <a-cylinder position="0 0.3 0" radius="6" height="0.4" color="#555"></a-cylinder>
+
+        <a-entity id="rocket-group" position="0 0.5 0">
+            <a-entity id="rocket-body">
