@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Orbit Systems</title>
+    <title>Space Builder: Parachute & Physics</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -18,12 +18,17 @@
         .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 10px; font-weight: bold; cursor: pointer; border: none; font-size: 24px; }
         
         #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; align-content: center; }
-        .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 13px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 80px; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; }
 
         /* Flight UI */
         #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; }
         #alt-meter { background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #0f0; border-radius: 5px; font-size: 20px; color: #0f0; font-weight: bold; margin-bottom: 10px; }
-        .orbit-toggle { background: #444; color: white; border: 1px solid #fff; padding: 5px 15px; pointer-events: auto; cursor: pointer; border-radius: 20px; }
+        
+        #deploy-btn { 
+            background: #d00; color: white; border: 3px solid white; padding: 15px 30px; 
+            font-weight: bold; font-size: 18px; border-radius: 10px; pointer-events: auto; 
+            cursor: pointer; display: none; 
+        }
 
         #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
         .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; }
@@ -34,8 +39,10 @@
         .thrust-switch::after { content: ''; position: absolute; top: 5px; left: 5px; width: 42px; height: 40px; background: #eee; border-radius: 5px; transition: 0.2s; }
         .thrust-switch:checked::after { transform: translateY(42px); }
 
-        #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 22px; position: absolute; top: 0; left: 0; z-index: 10; }
-        .placed-part { width: 140px; margin: 0 auto; color: white; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); background: #333; }
+        /* Builder Styles */
+        .placed-part { width: 120px; margin: 0 auto; color: white; font-weight: bold; font-size: 9px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); background: #333; }
+        .bp-parachute { border-radius: 50px 50px 0 0; background: #d00; width: 60px; height: 30px !important; }
+        .bp-shield { height: 12px !important; background: #ff6600 !important; border-color: #fff; }
     </style>
 </head>
 <body>
@@ -55,7 +62,7 @@
 
     <div id="flight-ui">
         <div id="alt-meter">ALTITUDE: 0m</div>
-        <button class="orbit-toggle" onclick="toggleOrbits()">SHOW ORBITS</button>
+        <button id="deploy-btn" onclick="deployParachute()">DEPLOY PARACHUTE</button>
     </div>
 
     <div id="flight-controls">
@@ -69,15 +76,9 @@
 
     <a-scene id="game-scene" style="display:none">
         <a-sky id="sky" color="#87CEEB"></a-sky>
-
         <a-circle position="0 0 0" rotation="-90 0 0" radius="200" color="#228B22"></a-circle>
         <a-plane position="0 -0.5 -250" rotation="-90 0 0" width="1000" height="500" color="#0000FF"></a-plane>
         <a-box position="0 0.05 0" width="12" height="0.1" depth="12" color="#555"></a-box>
-
-        <a-entity id="orbit-lines" visible="false">
-            <a-ring color="#ffffff" radius-inner="119.5" radius-outer="120.5" rotation="-90 0 0" position="0 40 0" opacity="0.3"></a-ring>
-            <a-entity id="rocket-path"></a-entity>
-        </a-entity>
 
         <a-entity id="moon-rig" position="0 40 0" animation="property: rotation; to: 0 360 0; dur: 30000; easing: linear; loop: true">
             <a-sphere position="120 0 0" radius="8" color="#DDD"></a-sphere>
@@ -89,14 +90,29 @@
                 <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2"></a-cone>
             </a-entity>
         </a-entity>
-        
         <a-camera id="cam" position="0 5 25" look-controls="enabled: false"></a-camera>
     </a-scene>
 
     <script>
-        const PART_PAGES = [[{name: 'Capsule', cost: 200}, {name: 'Fuel Tank', cost: 300}], [{name: 'Booster', cost: 400}, {name: 'Decoupler', cost: 300}]];
-        let currentPage = 0, stack = [], cash = 10000;
-        let isThrusting = false, isLeft = false, isRight = false, orbitsVisible = false;
+        const PART_PAGES = [
+            [
+                {name: 'Capsule', cost: 200, type: 'cone', color: '#999', h: 2},
+                {name: 'Parachute', cost: 150, type: 'parachute', color: '#d00', h: 0.6, class: 'bp-parachute'},
+                {name: 'Fuel Tank', cost: 300, type: 'cylinder', color: '#ff9900', h: 3}
+            ],
+            [
+                {name: 'Booster', cost: 400, type: 'cylinder', color: '#555', h: 3},
+                {name: 'Heat Shield', cost: 200, type: 'cylinder', color: '#ff6600', h: 0.2, class: 'bp-shield'},
+                {name: 'Decoupler', cost: 100, type: 'cylinder', color: '#333', h: 0.4}
+            ],
+            [
+                {name: 'Antenna Tank', cost: 500, type: 'cylinder', color: '#00ffff', h: 2.5},
+                {name: 'Rover Fairing', cost: 800, type: 'cone', color: '#eee', h: 3}
+            ]
+        ];
+
+        let stack = [], cash = 10000, currentPage = 0;
+        let isThrusting = false, isLeft = false, isRight = false, paraDeployed = false, hasParachute = false;
         let vY = 0, vX = 0, posX = 0, posY = 0.1;
 
         function renderParts() {
@@ -106,23 +122,24 @@
                 const btn = document.createElement('button');
                 btn.className = 'part-btn';
                 btn.innerHTML = `${p.name.toUpperCase()}<br>$${p.cost}`;
-                btn.onclick = () => addPart(p.name, p.cost);
+                btn.onclick = () => addPart(p);
                 grid.appendChild(btn);
             });
         }
 
         function scrollParts(dir) { currentPage = (currentPage + dir + PART_PAGES.length) % PART_PAGES.length; renderParts(); }
 
-        function addPart(name, cost) {
-            if (cash < cost) return;
-            cash -= cost;
+        function addPart(p) {
+            if (cash < p.cost) return;
+            cash -= p.cost;
             const el = document.createElement('div');
-            el.className = 'placed-part';
-            el.style.height = '60px';
-            el.innerText = name.toUpperCase();
+            el.className = 'placed-part ' + (p.class || '');
+            el.style.height = (p.h * 20) + 'px';
+            el.innerText = p.name.toUpperCase();
             document.getElementById('rocket-container').appendChild(el);
             document.getElementById('cash').innerText = cash;
-            stack.push({ name, cost, h: 2.5 });
+            stack.push(p);
+            if(p.type === 'parachute') hasParachute = true;
         }
 
         function undo() {
@@ -131,12 +148,7 @@
             document.getElementById('rocket-container').lastChild.remove();
             cash += last.cost;
             document.getElementById('cash').innerText = cash;
-        }
-
-        function toggleOrbits() {
-            orbitsVisible = !orbitsVisible;
-            document.getElementById('orbit-lines').setAttribute('visible', orbitsVisible);
-            document.querySelector('.orbit-toggle').innerText = orbitsVisible ? "HIDE ORBITS" : "SHOW ORBITS";
+            if(last.type === 'parachute') hasParachute = false;
         }
 
         function goToLaunchpad() {
@@ -150,8 +162,15 @@
             let currentH = 0;
             stack.forEach(p => {
                 const e = document.createElement('a-entity');
-                e.setAttribute('geometry', { primitive: p.name==='Capsule'?'cone':'cylinder', height: p.h, radiusBottom: 1 });
-                e.setAttribute('material', { color: p.name==='Capsule'?'#ccc':'#ff9900' });
+                if (p.type === 'parachute') {
+                    e.setAttribute('id', 'chute-mesh');
+                    e.setAttribute('geometry', { primitive: 'sphere', radius: 0.8, phiLength: 180, thetaLength: 90 });
+                    e.setAttribute('rotation', '90 0 0');
+                    e.setAttribute('scale', '1 1 1');
+                } else {
+                    e.setAttribute('geometry', { primitive: p.type, height: p.h, radiusBottom: 1, radiusTop: p.type === 'cone' ? 0 : 1 });
+                }
+                e.setAttribute('material', { color: p.color });
                 e.setAttribute('position', `0 ${currentH + (p.h/2)} 0`);
                 currentH += p.h;
                 v.appendChild(e);
@@ -162,30 +181,57 @@
         function toggleThrust(el) {
             isThrusting = el.checked;
             document.getElementById('fire').setAttribute('visible', isThrusting);
+            if(isThrusting && paraDeployed) deployParachute(); // Cut chute if thrusting
+        }
+
+        function deployParachute() {
+            if (!hasParachute) return;
+            paraDeployed = !paraDeployed;
+            const chute = document.getElementById('chute-mesh');
+            const btn = document.getElementById('deploy-btn');
+            if (paraDeployed) {
+                chute.setAttribute('animation', "property: scale; to: 4 4 4; dur: 1000");
+                btn.innerText = "CUT PARACHUTE";
+            } else {
+                chute.setAttribute('scale', '1 1 1');
+                btn.innerText = "DEPLOY PARACHUTE";
+            }
         }
 
         function physics() {
-            if (isThrusting) vY += 0.005; else vY -= 0.002;
-            if (isLeft) vX -= 0.005; if (isRight) vX += 0.005;
+            // Gravity
+            let gravity = -0.002;
+            
+            // Thrust
+            if (isThrusting) vY += 0.005; 
+            else vY += gravity;
 
+            // Parachute Air Resistance (Drag)
+            if (paraDeployed && vY < 0) {
+                vY *= 0.85; // Significantly slow down falling speed
+            }
+
+            if (isLeft) vX -= 0.005; if (isRight) vX += 0.005;
             vX *= 0.98;
             posX += vX;
             posY = Math.max(0.1, posY + vY);
-            if (posY <= 0.1) vY = 0;
+            
+            if (posY <= 0.1) { vY = 0; vX = 0; }
 
             document.getElementById('rocket-group').setAttribute('position', `${posX} ${posY} 0`);
             document.getElementById('cam').setAttribute('position', `${posX} ${posY + 5} 25`);
-            document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY * 100)}m`;
             
+            let altitude = Math.round(posY * 100);
+            document.getElementById('alt-meter').innerText = `ALTITUDE: ${altitude}m`;
+
+            // Show deploy button only when high enough and falling
+            if (hasParachute && altitude > 50) {
+                document.getElementById('deploy-btn').style.display = 'block';
+            }
+
             let s = Math.max(0, 135 - posY);
             document.getElementById('sky').setAttribute('color', `rgb(${s},${s+50},${s+100})`);
 
-            // Dynamic Rocket Path line
-            if(orbitsVisible) {
-                const path = document.getElementById('rocket-path');
-                path.setAttribute('line', {start: `${posX} ${posY} 0`, end: `${posX + vX*50} ${posY + vY*50} 0`, color: '#0f0'});
-            }
-            
             requestAnimationFrame(physics);
         }
 
