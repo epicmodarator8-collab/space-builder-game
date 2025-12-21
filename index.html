@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Fuel & Moon Landing</title>
+    <title>Space Builder: Fixed Orbits & Fuel</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -18,7 +18,7 @@
         .bar-fill { height: 100%; width: 100%; transition: width 0.1s; background: #00ccff; }
         .bar-label { position: absolute; width: 100%; text-align: center; font-size: 10px; font-weight: bold; color: white; top: -1px; }
 
-        #flight-controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
+        #flight-controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 400; }
         .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 70px; height: 70px; border-radius: 50%; font-size: 30px; pointer-events: auto; }
         .thrust-switch { appearance: none; width: 55px; height: 90px; background: #444; border: 3px solid #fff; border-radius: 10px; position: relative; pointer-events: auto; }
         .thrust-switch:checked { background: #ff4500; }
@@ -58,4 +58,146 @@
     <div id="flight-controls">
         <button class="move-btn" onmousedown="isLeft=true" onmouseup="isLeft=false" ontouchstart="isLeft=true" ontouchend="isLeft=false">◀</button>
         <input type="checkbox" id="t-switch" class="thrust-switch" onchange="toggleThrust(this)">
-        <button class="move-btn" onmousedown="isRight=true" onmouseup="isRight=false" ontouchstart="isRight=true" ontouchend="
+        <button class="move-btn" onmousedown="isRight=true" onmouseup="isRight=false" ontouchstart="isRight=true" ontouchend="isRight=false">▶</button>
+    </div>
+
+    <a-scene id="game-scene" style="display:none">
+        <a-sky id="sky" color="#87CEEB"></a-sky>
+        
+        <a-sphere position="0 15000 -500" radius="100" color="#FFFFFF" material="shader:flat; emissive:#FFF;"></a-sphere>
+
+        <a-entity id="earth-group">
+            <a-circle position="0 -0.5 0" rotation="-90 0 0" radius="3000" color="#1E90FF"></a-circle>
+            <a-circle position="0 0.01 0" rotation="-90 0 0" radius="50" color="#228B22"></a-circle>
+        </a-entity>
+
+        <a-entity id="moon-group" position="4000 6000 0">
+            <a-sphere radius="150" color="#888"></a-sphere>
+            <a-circle rotation="-90 0 0" radius="60" color="#666" position="0 149.5 0"></a-circle>
+        </a-entity>
+
+        <a-entity id="cam-pivot">
+            <a-entity id="rocket-group">
+                <a-entity id="rocket-body">
+                    <a-entity id="flight-stack"></a-entity>
+                    <a-entity id="fire" position="0 -1.5 0" visible="false">
+                        <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2" material="emissive:#ff4500;"></a-cone>
+                    </a-entity>
+                </a-entity>
+            </a-entity>
+            <a-camera id="cam" position="0 5 25" look-controls="enabled: false"></a-camera>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        const PARTS = [
+            {name: 'Capsule', cost: 200, type: 'capsule', color: '#EEE', h: 2},
+            {name: 'Fuel Tank', cost: 300, type: 'tank', color: '#f90', h: 3},
+            {name: 'Booster', cost: 400, type: 'booster', color: '#333', h: 2},
+            {name: 'Decoupler', cost: 100, type: 'decoupler', color: '#222', h: 0.4}
+        ];
+
+        let stack = [], cash = 10000, isFlying = false;
+        let isDragging = false, lastX = 0, lastY = 0, orbitY = 0, orbitX = 0;
+        let isThrusting = false, isLeft = false, isRight = false;
+        let vY = 0, vX = 0, posX = 0, posY = 0.5, rotation = 0;
+        let currentFuel = 0, maxFuel = 0, hasEngine = false;
+
+        function startDrag(e) { isDragging = true; lastX = e.pageX || (e.touches ? e.touches[0].pageX : 0); lastY = e.pageY || (e.touches ? e.touches[0].pageY : 0); }
+        function stopDrag() { isDragging = false; }
+        function doDrag(e) {
+            if (!isDragging) return;
+            let x = e.pageX || (e.touches ? e.touches[0].pageX : 0);
+            let y = e.pageY || (e.touches ? e.touches[0].pageY : 0);
+            orbitY += (x - lastX) * 0.5;
+            orbitX = Math.max(-40, Math.min(40, orbitX - (y - lastY) * 0.5));
+            if (!isFlying) document.getElementById('build-rig').setAttribute('rotation', `0 ${orbitY} 0`);
+            else document.getElementById('cam-pivot').setAttribute('rotation', `${orbitX} ${orbitY} 0`);
+            lastX = x; lastY = y;
+        }
+
+        function renderParts() {
+            const grid = document.getElementById('parts-grid');
+            PARTS.forEach(p => {
+                const btn = document.createElement('button'); btn.className = 'part-btn';
+                btn.innerHTML = `${p.name}<br>$${p.cost}`;
+                btn.onclick = () => { if(cash>=p.cost){cash-=p.cost; stack.push({...p, id:'p'+Math.random()}); updateStacks();} };
+                grid.appendChild(btn);
+            });
+        }
+
+        function undo() { if(stack.length > 0) { let p = stack.pop(); cash += p.cost; updateStacks(); } }
+
+        function updateStacks() {
+            document.getElementById('cash').innerText = cash;
+            buildVisuals('build-stack');
+            hasEngine = stack.some(p => p.type === 'booster');
+            maxFuel = stack.filter(p => p.type === 'tank').length * 50;
+            currentFuel = maxFuel;
+        }
+
+        function buildVisuals(targetId) {
+            const v = document.getElementById(targetId); v.innerHTML = "";
+            let currentH = 0;
+            stack.forEach(p => {
+                const container = document.createElement('a-entity');
+                container.setAttribute('position', `0 ${currentH + (p.h/2)} 0`);
+                let shape = (p.type==='capsule'||p.type==='booster') ? 'a-cone' : 'a-cylinder';
+                const mesh = document.createElement(shape);
+                mesh.setAttribute('height', p.h); mesh.setAttribute('color', p.color);
+                mesh.setAttribute('radius-bottom', p.type==='booster'?1.2:1);
+                mesh.setAttribute('radius-top', p.type==='capsule'?0:1);
+                container.appendChild(mesh);
+                currentH += p.h; v.appendChild(container);
+            });
+        }
+
+        function goToLaunchpad() {
+            if (stack.length === 0) return;
+            isFlying = true;
+            document.getElementById('build-screen').style.display = 'none';
+            document.getElementById('game-scene').style.display = 'block';
+            document.getElementById('flight-controls').style.display = 'flex';
+            document.getElementById('flight-ui').style.display = 'flex';
+            buildVisuals('flight-stack'); physics();
+        }
+
+        function toggleThrust(el) { if (el.checked && (currentFuel <= 0 || !hasEngine)) { el.checked = false; return; } isThrusting = el.checked; }
+
+        function decouple() {
+            const idx = stack.findIndex(p => p.type === 'decoupler');
+            if (idx !== -1) { stack.splice(0, idx + 1); buildVisuals('flight-stack'); updateStacks(); }
+        }
+
+        function physics() {
+            if (isLeft) rotation += 1.5; if (isRight) rotation -= 1.5;
+            document.getElementById('rocket-body').setAttribute('rotation', `0 0 ${rotation}`);
+            let rad = rotation * (Math.PI / 180);
+            
+            if (isThrusting && currentFuel > 0 && hasEngine) {
+                currentFuel -= 0.12;
+                vX += Math.sin(-rad) * 0.008; 
+                vY += Math.cos(rad) * 0.008;
+                document.getElementById('fire').setAttribute('visible', true);
+            } else {
+                if (isThrusting) { isThrusting = false; document.getElementById('t-switch').checked = false; }
+                document.getElementById('fire').setAttribute('visible', false);
+            }
+
+            vY -= 0.0025; // Earth Gravity
+            posX += vX; posY += vY;
+
+            if (posY <= 0.5) { posY = 0.5; vX = 0; vY = 0; }
+
+            document.getElementById('cam-pivot').setAttribute('position', `${posX} ${posY} 0`);
+            document.getElementById('fuel-bar').style.width = maxFuel > 0 ? (currentFuel / maxFuel * 100) + "%" : "0%";
+            document.getElementById('fuel-txt').innerText = Math.round(currentFuel);
+            document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY*100)}m`;
+            document.getElementById('vel-meter').innerText = `VELOCITY: ${Math.round(Math.sqrt(vX*vX+vY*vY)*1000)}m/s`;
+
+            requestAnimationFrame(physics);
+        }
+        window.onload = renderParts;
+    </script>
+</body>
+</html>
