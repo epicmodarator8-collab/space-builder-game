@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Parachute & Physics</title>
+    <title>Space Builder: Into the Stars</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -23,15 +23,10 @@
         /* Flight UI */
         #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; }
         #alt-meter { background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #0f0; border-radius: 5px; font-size: 20px; color: #0f0; font-weight: bold; margin-bottom: 10px; }
-        
-        #deploy-btn { 
-            background: #d00; color: white; border: 3px solid white; padding: 15px 30px; 
-            font-weight: bold; font-size: 18px; border-radius: 10px; pointer-events: auto; 
-            cursor: pointer; display: none; 
-        }
+        #deploy-btn { background: #d00; color: white; border: 3px solid white; padding: 10px 20px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; }
 
         #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
-        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; }
+        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
         
         .switch-container { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .thrust-switch { appearance: none; width: 60px; height: 100px; background: #444; border: 4px solid #fff; border-radius: 10px; position: relative; cursor: pointer; }
@@ -39,7 +34,7 @@
         .thrust-switch::after { content: ''; position: absolute; top: 5px; left: 5px; width: 42px; height: 40px; background: #eee; border-radius: 5px; transition: 0.2s; }
         .thrust-switch:checked::after { transform: translateY(42px); }
 
-        /* Builder Styles */
+        /* Builder Visuals */
         .placed-part { width: 120px; margin: 0 auto; color: white; font-weight: bold; font-size: 9px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); background: #333; }
         .bp-parachute { border-radius: 50px 50px 0 0; background: #d00; width: 60px; height: 30px !important; }
         .bp-shield { height: 12px !important; background: #ff6600 !important; border-color: #fff; }
@@ -48,15 +43,15 @@
 <body>
 
     <div id="build-screen">
-        <div id="budget-display">BUDGET: $<span id="cash">10000</span></div>
+        <div id="budget-display" style="padding:15px; color:#0f0; font-size:22px; font-weight:bold;">BUDGET: $<span id="cash">10000</span></div>
         <div id="blueprint-area"><div id="rocket-container" style="display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 20px;"></div></div>
         
         <div id="menu-container">
             <button class="top-launch-btn" onclick="goToLaunchpad()">🚀 GO TO LAUNCHPAD</button>
-            <button class="scroll-nav" onclick="scrollParts(-1)">▲</button>
+            <button class="scroll-nav" onclick="scrollParts(-1)">▲ SCROLL UP</button>
             <div id="parts-grid"></div>
-            <button class="scroll-nav" onclick="scrollParts(1)">▼</button>
-            <button style="background:#600; color:white; padding:10px; border:none;" onclick="undo()">⚠ DELETE PART</button>
+            <button class="scroll-nav" onclick="scrollParts(1)">▼ SCROLL DOWN</button>
+            <button style="background:#600; color:white; padding:10px; border:none; font-weight:bold;" onclick="undo()">⚠ DELETE LAST PART</button>
         </div>
     </div>
 
@@ -76,6 +71,11 @@
 
     <a-scene id="game-scene" style="display:none">
         <a-sky id="sky" color="#87CEEB"></a-sky>
+
+        <a-entity id="stars" visible="false">
+            <a-star-system count="2000" radius="250" depth="0"></a-star-system>
+        </a-entity>
+
         <a-circle position="0 0 0" rotation="-90 0 0" radius="200" color="#228B22"></a-circle>
         <a-plane position="0 -0.5 -250" rotation="-90 0 0" width="1000" height="500" color="#0000FF"></a-plane>
         <a-box position="0 0.05 0" width="12" height="0.1" depth="12" color="#555"></a-box>
@@ -85,9 +85,11 @@
         </a-entity>
 
         <a-entity id="rocket-group" position="0 0.1 0">
-            <a-entity id="visual-stack"></a-entity>
-            <a-entity id="fire" position="0 -1.5 0" visible="false">
-                <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2"></a-cone>
+            <a-entity id="rocket-body" rotation="0 0 0">
+                <a-entity id="visual-stack"></a-entity>
+                <a-entity id="fire" position="0 -1.5 0" visible="false">
+                    <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2"></a-cone>
+                </a-entity>
             </a-entity>
         </a-entity>
         <a-camera id="cam" position="0 5 25" look-controls="enabled: false"></a-camera>
@@ -104,16 +106,12 @@
                 {name: 'Booster', cost: 400, type: 'cylinder', color: '#555', h: 3},
                 {name: 'Heat Shield', cost: 200, type: 'cylinder', color: '#ff6600', h: 0.2, class: 'bp-shield'},
                 {name: 'Decoupler', cost: 100, type: 'cylinder', color: '#333', h: 0.4}
-            ],
-            [
-                {name: 'Antenna Tank', cost: 500, type: 'cylinder', color: '#00ffff', h: 2.5},
-                {name: 'Rover Fairing', cost: 800, type: 'cone', color: '#eee', h: 3}
             ]
         ];
 
         let stack = [], cash = 10000, currentPage = 0;
         let isThrusting = false, isLeft = false, isRight = false, paraDeployed = false, hasParachute = false;
-        let vY = 0, vX = 0, posX = 0, posY = 0.1;
+        let vY = 0, vX = 0, posX = 0, posY = 0.1, rotation = 0;
 
         function renderParts() {
             const grid = document.getElementById('parts-grid');
@@ -121,7 +119,7 @@
             PART_PAGES[currentPage].forEach(p => {
                 const btn = document.createElement('button');
                 btn.className = 'part-btn';
-                btn.innerHTML = `${p.name.toUpperCase()}<br>$${p.cost}`;
+                btn.innerHTML = `${p.name.toUpperCase()}<br>($${p.cost})`;
                 btn.onclick = () => addPart(p);
                 grid.appendChild(btn);
             });
@@ -166,7 +164,6 @@
                     e.setAttribute('id', 'chute-mesh');
                     e.setAttribute('geometry', { primitive: 'sphere', radius: 0.8, phiLength: 180, thetaLength: 90 });
                     e.setAttribute('rotation', '90 0 0');
-                    e.setAttribute('scale', '1 1 1');
                 } else {
                     e.setAttribute('geometry', { primitive: p.type, height: p.h, radiusBottom: 1, radiusTop: p.type === 'cone' ? 0 : 1 });
                 }
@@ -181,7 +178,7 @@
         function toggleThrust(el) {
             isThrusting = el.checked;
             document.getElementById('fire').setAttribute('visible', isThrusting);
-            if(isThrusting && paraDeployed) deployParachute(); // Cut chute if thrusting
+            if(isThrusting && paraDeployed) deployParachute();
         }
 
         function deployParachute() {
@@ -190,7 +187,7 @@
             const chute = document.getElementById('chute-mesh');
             const btn = document.getElementById('deploy-btn');
             if (paraDeployed) {
-                chute.setAttribute('animation', "property: scale; to: 4 4 4; dur: 1000");
+                chute.setAttribute('animation', "property: scale; to: 4 4 4; dur: 800");
                 btn.innerText = "CUT PARACHUTE";
             } else {
                 chute.setAttribute('scale', '1 1 1');
@@ -199,20 +196,23 @@
         }
 
         function physics() {
-            // Gravity
+            if (isLeft) rotation += 1.5;
+            if (isRight) rotation -= 1.5;
+            document.getElementById('rocket-body').setAttribute('rotation', `0 0 ${rotation}`);
+
+            let rad = rotation * (Math.PI / 180);
             let gravity = -0.002;
             
-            // Thrust
-            if (isThrusting) vY += 0.005; 
-            else vY += gravity;
-
-            // Parachute Air Resistance (Drag)
-            if (paraDeployed && vY < 0) {
-                vY *= 0.85; // Significantly slow down falling speed
+            if (isThrusting) {
+                vX += Math.sin(-rad) * 0.006;
+                vY += Math.cos(rad) * 0.006;
+            } else {
+                vY += gravity;
             }
 
-            if (isLeft) vX -= 0.005; if (isRight) vX += 0.005;
-            vX *= 0.98;
+            if (paraDeployed && vY < 0) vY *= 0.85;
+
+            vX *= 0.99;
             posX += vX;
             posY = Math.max(0.1, posY + vY);
             
@@ -224,16 +224,34 @@
             let altitude = Math.round(posY * 100);
             document.getElementById('alt-meter').innerText = `ALTITUDE: ${altitude}m`;
 
-            // Show deploy button only when high enough and falling
-            if (hasParachute && altitude > 50) {
-                document.getElementById('deploy-btn').style.display = 'block';
-            }
+            if (hasParachute && altitude > 50) document.getElementById('deploy-btn').style.display = 'block';
 
-            let s = Math.max(0, 135 - posY);
-            document.getElementById('sky').setAttribute('color', `rgb(${s},${s+50},${s+100})`);
+            // Atmosphere Transition
+            let skyVal = Math.max(0, 135 - (posY / 2)); 
+            document.getElementById('sky').setAttribute('color', `rgb(${skyVal},${skyVal+50},${skyVal+100})`);
+            
+            // Show stars when high enough
+            if (posY > 150) {
+                document.getElementById('stars').setAttribute('visible', 'true');
+            }
 
             requestAnimationFrame(physics);
         }
+
+        // Register custom star component for A-Frame
+        AFRAME.registerComponent('star-system', {
+            schema: { count: {type: 'int', default: 1000}, radius: {type: 'number', default: 200} },
+            init: function () {
+                const geom = new THREE.BufferGeometry();
+                const vertices = [];
+                for (let i = 0; i < this.data.count; i++) {
+                    vertices.push(THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000));
+                }
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                const mat = new THREE.PointsMaterial({color: 0xFFFFFF, size: 0.5});
+                this.el.setObject3D('mesh', new THREE.Points(geom, mat));
+            }
+        });
 
         window.onload = renderParts;
     </script>
