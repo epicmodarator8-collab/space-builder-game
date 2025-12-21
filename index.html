@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Repair Station</title>
+    <title>Space Builder: Fixed Colors</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -35,7 +35,7 @@
         .thrust-switch:checked::after { transform: translateY(42px); }
 
         .placed-part { width: 120px; margin: 0 auto; color: white; font-weight: bold; font-size: 9px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); background: #333; }
-        .bp-parachute { border-radius: 50px 50px 0 0; background: #d00; width: 60px; height: 30px !important; }
+        .bp-parachute { border-radius: 50px 50px 0 0; background: #d00 !important; width: 60px; height: 30px !important; }
         .bp-shield { height: 12px !important; background: #ff6600 !important; }
     </style>
 </head>
@@ -78,9 +78,9 @@
         <a-box position="0 0.05 0" width="12" height="0.1" depth="12" color="#555"></a-box>
         
         <a-entity id="repair-station" position="15 0.1 0">
-            <a-cylinder radius="4" height="0.2" color="#00f" opacity="0.4"></a-cylinder>
-            <a-text value="REPAIR ZONE" align="center" position="0 3 0" color="#55f" scale="2 2 2"></a-text>
-            <a-light type="point" color="#00f" intensity="0.8" position="0 2 0"></a-light>
+            <a-cylinder radius="4" height="0.2" color="#0000ff" opacity="0.4"></a-cylinder>
+            <a-text value="REPAIR ZONE" align="center" position="0 3 0" color="#5555ff" scale="2 2 2"></a-text>
+            <a-light type="point" color="#0000ff" intensity="0.8" position="0 2 0"></a-light>
         </a-entity>
 
         <a-entity id="rocket-group" position="0 0.1 0">
@@ -97,14 +97,14 @@
     <script>
         const PART_PAGES = [
             [
-                {name: 'Capsule', cost: 200, type: 'cone', color: '#999', h: 2},
-                {name: 'Parachute', cost: 150, type: 'parachute', color: '#d00', h: 0.6, class: 'bp-parachute'},
+                {name: 'Capsule', cost: 200, type: 'cone', color: '#999999', h: 2},
+                {name: 'Parachute', cost: 150, type: 'parachute', color: '#ff0000', h: 0.6, class: 'bp-parachute'},
                 {name: 'Fuel Tank', cost: 300, type: 'cylinder', color: '#ff9900', h: 3}
             ],
             [
-                {name: 'Booster', cost: 400, type: 'cylinder', color: '#555', h: 3},
+                {name: 'Booster', cost: 400, type: 'cylinder', color: '#555555', h: 3},
                 {name: 'Heat Shield', cost: 200, type: 'cylinder', color: '#ff6600', h: 0.2, class: 'bp-shield'},
-                {name: 'Decoupler', cost: 100, type: 'cylinder', color: '#333', h: 0.4}
+                {name: 'Decoupler', cost: 100, type: 'cylinder', color: '#333333', h: 0.4}
             ]
         ];
 
@@ -118,7 +118,7 @@
             PART_PAGES[currentPage].forEach(p => {
                 const btn = document.createElement('button');
                 btn.className = 'part-btn';
-                btn.innerHTML = `${p.name.toUpperCase()}<br>($${p.cost})`;
+                btn.innerHTML = p.name.toUpperCase() + "<br>($" + p.cost + ")";
                 btn.onclick = () => addPart(p);
                 grid.appendChild(btn);
             });
@@ -135,7 +135,7 @@
             el.innerText = p.name.toUpperCase();
             document.getElementById('rocket-container').appendChild(el);
             document.getElementById('cash').innerText = cash;
-            stack.push({...p, id: 'p' + Math.random()});
+            stack.push({...p, id: 'p' + Math.random().toString(36).substr(2, 9)});
             if(p.type === 'parachute') hasParachute = true;
         }
 
@@ -160,8 +160,8 @@
                 } else {
                     e.setAttribute('geometry', { primitive: p.type, height: p.h, radiusBottom: 1, radiusTop: p.type === 'cone' ? 0 : 1 });
                 }
-                e.setAttribute('material', { color: p.color });
-                e.setAttribute('position', `0 ${currentH + (p.h/2)} 0`);
+                e.setAttribute('material', { color: p.color, shader: 'flat' });
+                e.setAttribute('position', '0 ' + (currentH + (p.h/2)) + ' 0');
                 currentH += p.h;
                 v.appendChild(e);
             });
@@ -202,7 +202,7 @@
         function physics() {
             if (isLeft) rotation += 1.5;
             if (isRight) rotation -= 1.5;
-            document.getElementById('rocket-body').setAttribute('rotation', `0 0 ${rotation}`);
+            document.getElementById('rocket-body').setAttribute('rotation', '0 0 ' + rotation);
 
             let rad = rotation * (Math.PI / 180);
             if (isThrusting) {
@@ -219,7 +219,6 @@
 
             let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
 
-            // Ground Collision
             if (posY <= 0.1) {
                 if (vel > 80 && stack.length > 0) {
                     const destroyed = stack.shift();
@@ -232,7 +231,6 @@
                 }
             }
 
-            // Repair Logic
             const distToRepair = Math.abs(posX - 15);
             if (distToRepair < 3 && posY < 0.5 && graveyard.length > 0) {
                 if (cash >= 500) {
@@ -246,16 +244,16 @@
                 }
             }
 
-            document.getElementById('rocket-group').setAttribute('position', `${posX} ${posY} 0`);
-            document.getElementById('cam').setAttribute('position', `${posX} ${posY + 5} 25`);
-            document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY * 100)}m`;
+            document.getElementById('rocket-group').setAttribute('position', posX + ' ' + posY + ' 0');
+            document.getElementById('cam').setAttribute('position', posX + ' ' + (posY + 5) + ' 25');
+            document.getElementById('alt-meter').innerText = "ALTITUDE: " + Math.round(posY * 100) + "m";
             const vEl = document.getElementById('vel-meter');
-            vEl.innerText = `VELOCITY: ${Math.round(vel)}m/s`;
-            vEl.style.color = vel > 80 ? "#f00" : "#0f0";
+            vEl.innerText = "VELOCITY: " + Math.round(vel) + "m/s";
+            vEl.style.color = vel > 80 ? "#ff0000" : "#00ff00";
 
             if (hasParachute && posY > 0.5) document.getElementById('deploy-btn').style.display = 'block';
-            let skyVal = Math.max(0, 135 - (posY / 2)); 
-            document.getElementById('sky').setAttribute('color', `rgb(${skyVal},${skyVal+50},${skyVal+100})`);
+            let sV = Math.max(0, 135 - (posY / 2)); 
+            document.getElementById('sky').setAttribute('color', "rgb(" + Math.round(sV) + "," + Math.round(sV+50) + "," + Math.round(sV+100) + ")");
             if (posY > 150) document.getElementById('stars').setAttribute('visible', 'true');
 
             requestAnimationFrame(physics);
