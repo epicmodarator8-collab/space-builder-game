@@ -1,63 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Ultimate Fixed</title>
+    <title>Space Builder: Orbit Systems</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
         #build-screen { display: flex; flex-direction: column; height: 100vh; background: #050505; position: relative; z-index: 100; }
         
         #blueprint-area { 
-            flex-grow: 1; 
-            position: relative; 
+            flex-grow: 1; position: relative; 
             background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; 
-            border-bottom: 2px solid #0f0; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column-reverse; 
+            border-bottom: 2px solid #0f0; display: flex; flex-direction: column-reverse; align-items: center;
         }
 
         #menu-container { height: 60%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
+        .top-launch-btn { background: #00ff00; color: #000; padding: 15px; font-weight: bold; cursor: pointer; border: none; font-size: 18px; text-transform: uppercase; }
+        .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 10px; font-weight: bold; cursor: pointer; border: none; font-size: 24px; }
         
-        /* NEW TOP LAUNCH BUTTON */
-        .top-launch-btn { 
-            background: #00ff00; color: #000; padding: 18px; font-weight: bold; 
-            cursor: pointer; border: none; font-size: 20px; text-transform: uppercase;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.3); border-bottom: 3px solid #008800;
-        }
-        .top-launch-btn:active { background: #00cc00; transform: translateY(2px); }
+        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; align-content: center; }
+        .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 13px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 80px; display: flex; align-items: center; justify-content: center; text-align: center; }
 
-        .scroll-nav { background: #222; color: #0f0; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 16px; text-transform: uppercase; }
+        /* Flight UI */
+        #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; }
+        #alt-meter { background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #0f0; border-radius: 5px; font-size: 20px; color: #0f0; font-weight: bold; margin-bottom: 10px; }
+        .orbit-toggle { background: #444; color: white; border: 1px solid #fff; padding: 5px 15px; pointer-events: auto; cursor: pointer; border-radius: 20px; }
+
+        #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
+        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; }
         
-        #parts-grid { 
-            flex-grow: 1; 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 10px; 
-            padding: 15px; 
-            align-content: center;
-        }
-        
-        .part-btn { 
-            background: #16213e; color: white; border: 2px solid #00ff00; font-size: 13px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 80px;
-            display: flex; align-items: center; justify-content: center; text-align: center;
-        }
+        .switch-container { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .thrust-switch { appearance: none; width: 60px; height: 100px; background: #444; border: 4px solid #fff; border-radius: 10px; position: relative; cursor: pointer; }
+        .thrust-switch:checked { background: #ff4500; }
+        .thrust-switch::after { content: ''; position: absolute; top: 5px; left: 5px; width: 42px; height: 40px; background: #eee; border-radius: 5px; transition: 0.2s; }
+        .thrust-switch:checked::after { transform: translateY(42px); }
 
-        /* TEXTURES */
-        .tex-capsule { background: linear-gradient(to bottom, #ddd, #999) !important; border: 3px solid #0f0 !important; border-radius: 40% 40% 5px 5px !important; }
-        .tex-tech { background: #001a1a; border: 2px solid #00ffff !important; box-shadow: inset 0 0 15px #00ffff; background-image: radial-gradient(#00ffff 1px, transparent 1px) !important; background-size: 6px 6px !important; }
-        .tex-fuel { background: linear-gradient(90deg, #cc7a00, #ff9900, #cc7a00) !important; border: 2px solid #0f0 !important;}
-        .tex-metal { background: linear-gradient(90deg, #333, #777, #333) !important; border: 2px solid #0f0 !important;}
-        .tex-heat { background: #222 !important; border: 2px solid #0f0 !important;}
-        .tex-fabric { background: repeating-linear-gradient(45deg, #fff, #fff 10px, #d00 10px, #d00 20px) !important; border: 2px solid #0f0 !important;}
-
-        #sticky-bottom { display: flex; flex-direction: column; }
-        .undo-btn { background: #600; color: white; padding: 15px; font-weight: bold; cursor: pointer; text-align: center; border:none; text-transform: uppercase;}
-        
-        #return-btn { position: absolute; bottom: 20px; right: 20px; padding: 15px; background: #222; color: #0f0; border: 2px solid #0f0; font-weight: bold; cursor: pointer; display: none; z-index: 200; }
-
-        #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 22px; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none; }
-        .placed-part { width: 140px; margin: 0 auto; color: white; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); }
+        #budget-display { padding: 15px; font-weight: bold; color: #00ff00; font-size: 22px; position: absolute; top: 0; left: 0; z-index: 10; }
+        .placed-part { width: 140px; margin: 0 auto; color: white; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); background: #333; }
     </style>
 </head>
 <body>
@@ -67,128 +45,150 @@
         <div id="blueprint-area"><div id="rocket-container" style="display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 20px;"></div></div>
         
         <div id="menu-container">
-            <button class="top-launch-btn" onclick="launch()">🚀 INITIALIZE LAUNCH</button>
-            
-            <button class="scroll-nav" onclick="scrollParts(-1)">▲ SCROLL UP</button>
+            <button class="top-launch-btn" onclick="goToLaunchpad()">🚀 GO TO LAUNCHPAD</button>
+            <button class="scroll-nav" onclick="scrollParts(-1)">▲</button>
             <div id="parts-grid"></div>
-            <button class="scroll-nav" onclick="scrollParts(1)">▼ SCROLL DOWN</button>
-            <div id="sticky-bottom">
-                <button class="undo-btn" onclick="undo()">⚠ DELETE LAST PART</button>
-            </div>
+            <button class="scroll-nav" onclick="scrollParts(1)">▼</button>
+            <button style="background:#600; color:white; padding:10px; border:none;" onclick="undo()">⚠ DELETE PART</button>
         </div>
     </div>
 
-    <button id="return-btn" onclick="resetBuilder()">RESET BUILDER</button>
+    <div id="flight-ui">
+        <div id="alt-meter">ALTITUDE: 0m</div>
+        <button class="orbit-toggle" onclick="toggleOrbits()">SHOW ORBITS</button>
+    </div>
+
+    <div id="flight-controls">
+        <button class="move-btn" onmousedown="isLeft=true" onmouseup="isLeft=false" ontouchstart="isLeft=true" ontouchend="isLeft=false">◀</button>
+        <div class="switch-container">
+            <input type="checkbox" id="t-switch" class="thrust-switch" onchange="toggleThrust(this)">
+            <span style="font-weight:bold;">THRUST</span>
+        </div>
+        <button class="move-btn" onmousedown="isRight=true" onmouseup="isRight=false" ontouchstart="isRight=true" ontouchend="isRight=false">▶</button>
+    </div>
 
     <a-scene id="game-scene" style="display:none">
-        <a-sky color="#000"></a-sky>
-        <a-entity id="stars"></a-entity>
-        <a-entity id="rocket-group">
+        <a-sky id="sky" color="#87CEEB"></a-sky>
+
+        <a-circle position="0 0 0" rotation="-90 0 0" radius="200" color="#228B22"></a-circle>
+        <a-plane position="0 -0.5 -250" rotation="-90 0 0" width="1000" height="500" color="#0000FF"></a-plane>
+        <a-box position="0 0.05 0" width="12" height="0.1" depth="12" color="#555"></a-box>
+
+        <a-entity id="orbit-lines" visible="false">
+            <a-ring color="#ffffff" radius-inner="119.5" radius-outer="120.5" rotation="-90 0 0" position="0 40 0" opacity="0.3"></a-ring>
+            <a-entity id="rocket-path"></a-entity>
+        </a-entity>
+
+        <a-entity id="moon-rig" position="0 40 0" animation="property: rotation; to: 0 360 0; dur: 30000; easing: linear; loop: true">
+            <a-sphere position="120 0 0" radius="8" color="#DDD"></a-sphere>
+        </a-entity>
+
+        <a-entity id="rocket-group" position="0 0.1 0">
             <a-entity id="visual-stack"></a-entity>
-            <a-entity id="fire" position="0 -1.8 0" visible="false">
-                <a-cone color="#ff4500" radius-bottom="0.9" radius-top="0.1" height="3" opacity="0.8"></a-cone>
-                <a-cone color="#ffd700" radius-bottom="0.5" radius-top="0.05" height="2" position="0 0.2 0"></a-cone>
+            <a-entity id="fire" position="0 -1.5 0" visible="false">
+                <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2"></a-cone>
             </a-entity>
         </a-entity>
-        <a-camera position="0 5 15"></a-camera>
+        
+        <a-camera id="cam" position="0 5 25" look-controls="enabled: false"></a-camera>
     </a-scene>
 
     <script>
-        const PART_PAGES = [
-            [
-                {name: 'Capsule', cost: 200, tex: 'tex-capsule'},
-                {name: 'Fairing+Rover', cost: 1000, tex: 'tex-tech'},
-                {name: 'Antenna Tank', cost: 600, tex: 'tex-tech'},
-                {name: 'Fuel Tank', cost: 300, tex: 'tex-fuel'}
-            ],
-            [
-                {name: 'Booster', cost: 400, tex: 'tex-metal'},
-                {name: 'Decoupler', cost: 300, tex: 'tex-heat'},
-                {name: 'Heat Shield', cost: 500, tex: 'tex-heat'},
-                {name: 'Parachute', cost: 400, tex: 'tex-fabric'}
-            ]
-        ];
-
-        let currentPage = 0;
-        let stack = [], cash = 10000;
+        const PART_PAGES = [[{name: 'Capsule', cost: 200}, {name: 'Fuel Tank', cost: 300}], [{name: 'Booster', cost: 400}, {name: 'Decoupler', cost: 300}]];
+        let currentPage = 0, stack = [], cash = 10000;
+        let isThrusting = false, isLeft = false, isRight = false, orbitsVisible = false;
+        let vY = 0, vX = 0, posX = 0, posY = 0.1;
 
         function renderParts() {
             const grid = document.getElementById('parts-grid');
             grid.innerHTML = "";
             PART_PAGES[currentPage].forEach(p => {
                 const btn = document.createElement('button');
-                btn.className = 'part-btn ' + p.tex;
-                btn.innerHTML = `${p.name.toUpperCase()}<br>($${p.cost})`;
-                btn.onclick = () => addPart(p.name, p.cost, p.tex);
+                btn.className = 'part-btn';
+                btn.innerHTML = `${p.name.toUpperCase()}<br>$${p.cost}`;
+                btn.onclick = () => addPart(p.name, p.cost);
                 grid.appendChild(btn);
             });
         }
 
-        function scrollParts(dir) {
-            currentPage = (currentPage + dir + PART_PAGES.length) % PART_PAGES.length;
-            renderParts();
-        }
+        function scrollParts(dir) { currentPage = (currentPage + dir + PART_PAGES.length) % PART_PAGES.length; renderParts(); }
 
-        function addPart(name, cost, tex) {
+        function addPart(name, cost) {
             if (cash < cost) return;
             cash -= cost;
-            const container = document.getElementById('rocket-container');
             const el = document.createElement('div');
-            el.className = 'placed-part ' + tex;
-            el.id = 'part-' + stack.length;
-            let hVal = (name.includes('Shield') || name.includes('Decoupler')) ? 30 : 70;
-            el.style.height = hVal + 'px';
+            el.className = 'placed-part';
+            el.style.height = '60px';
             el.innerText = name.toUpperCase();
-            container.appendChild(el);
+            document.getElementById('rocket-container').appendChild(el);
             document.getElementById('cash').innerText = cash;
-            stack.push({ name, cost, tex, hVal: hVal / 25 });
+            stack.push({ name, cost, h: 2.5 });
         }
 
         function undo() {
             if (stack.length === 0) return;
             const last = stack.pop();
-            const el = document.getElementById('part-' + stack.length);
-            if(el) el.remove();
+            document.getElementById('rocket-container').lastChild.remove();
             cash += last.cost;
             document.getElementById('cash').innerText = cash;
         }
 
-        function launch() {
+        function toggleOrbits() {
+            orbitsVisible = !orbitsVisible;
+            document.getElementById('orbit-lines').setAttribute('visible', orbitsVisible);
+            document.querySelector('.orbit-toggle').innerText = orbitsVisible ? "HIDE ORBITS" : "SHOW ORBITS";
+        }
+
+        function goToLaunchpad() {
             if (stack.length === 0) return;
             document.getElementById('build-screen').style.display = 'none';
             document.getElementById('game-scene').style.display = 'block';
-            document.getElementById('return-btn').style.display = 'block';
+            document.getElementById('flight-controls').style.display = 'flex';
+            document.getElementById('flight-ui').style.display = 'flex';
             
             const v = document.getElementById('visual-stack');
-            const group = document.getElementById('rocket-group');
-            v.innerHTML = '';
-            
-            let currentHeight = 0;
-            stack.forEach((p) => {
+            let currentH = 0;
+            stack.forEach(p => {
                 const e = document.createElement('a-entity');
-                let shape = p.name === 'Capsule' ? 'cone' : 'cylinder';
-                let h = p.hVal;
-                e.setAttribute('geometry', { primitive: shape, radiusBottom: 1.2, radiusTop: (shape==='cone' ? 0 : 1.2), height: h });
-                
-                let color = "#fff";
-                if(p.tex === 'tex-fuel') color = "#ff9900";
-                if(p.tex === 'tex-heat') color = "#222";
-                if(p.tex === 'tex-tech') color = "#00ffff";
-                if(p.tex === 'tex-metal') color = "#555";
-                
-                e.setAttribute('material', {color: color, metalness: 0.8, roughness: 0.2});
-                e.setAttribute('position', `0 ${currentHeight + (h / 2)} 0`);
-                currentHeight += h;
+                e.setAttribute('geometry', { primitive: p.name==='Capsule'?'cone':'cylinder', height: p.h, radiusBottom: 1 });
+                e.setAttribute('material', { color: p.name==='Capsule'?'#ccc':'#ff9900' });
+                e.setAttribute('position', `0 ${currentH + (p.h/2)} 0`);
+                currentH += p.h;
                 v.appendChild(e);
             });
-
-            setTimeout(() => {
-                document.getElementById('fire').setAttribute('visible', 'true');
-                group.setAttribute('animation', { property: 'position', to: '0 80 0', dur: 10000, easing: 'easeInQuad' });
-            }, 1000);
+            physics();
         }
 
-        function resetBuilder() { location.reload(); }
+        function toggleThrust(el) {
+            isThrusting = el.checked;
+            document.getElementById('fire').setAttribute('visible', isThrusting);
+        }
+
+        function physics() {
+            if (isThrusting) vY += 0.005; else vY -= 0.002;
+            if (isLeft) vX -= 0.005; if (isRight) vX += 0.005;
+
+            vX *= 0.98;
+            posX += vX;
+            posY = Math.max(0.1, posY + vY);
+            if (posY <= 0.1) vY = 0;
+
+            document.getElementById('rocket-group').setAttribute('position', `${posX} ${posY} 0`);
+            document.getElementById('cam').setAttribute('position', `${posX} ${posY + 5} 25`);
+            document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY * 100)}m`;
+            
+            let s = Math.max(0, 135 - posY);
+            document.getElementById('sky').setAttribute('color', `rgb(${s},${s+50},${s+100})`);
+
+            // Dynamic Rocket Path line
+            if(orbitsVisible) {
+                const path = document.getElementById('rocket-path');
+                path.setAttribute('line', {start: `${posX} ${posY} 0`, end: `${posX + vX*50} ${posY + vY*50} 0`, color: '#0f0'});
+            }
+            
+            requestAnimationFrame(physics);
+        }
+
         window.onload = renderParts;
     </script>
 </body>
