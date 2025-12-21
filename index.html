@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Re-entry & Decouple</title>
+    <title>Space Builder: Fuel Management</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -15,14 +15,18 @@
         #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; align-content: center; }
         .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; }
 
-        #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; z-index: 300; }
+        #flight-ui { position: absolute; top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 300; display:none; }
         .meter { background: rgba(0,0,0,0.8); padding: 5px 15px; border: 2px solid #0f0; border-radius: 5px; font-size: 18px; color: #0f0; font-weight: bold; margin-bottom: 5px; width: 220px; text-align: center; }
-        #heat-ui { width: 220px; height: 10px; background: #333; border: 1px solid #fff; display: none; margin-bottom: 10px; }
-        #heat-bar { width: 0%; height: 100%; background: orange; transition: width 0.1s; }
-        #msg { color: #f55; font-weight: bold; height: 20px; text-shadow: 0 0 5px #000; font-size: 20px; }
         
-        .flight-btn { background: #d00; color: white; border: 3px solid white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; margin: 5px; box-shadow: 0 0 10px #000; }
-        #decouple-btn { background: #ffaa00; color: #000; }
+        /* Fuel and Heat Bars */
+        .bar-container { width: 220px; height: 12px; background: #333; border: 1px solid #fff; margin-bottom: 5px; position: relative; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.1s; }
+        #fuel-bar { background: #00ccff; }
+        #heat-bar { background: #ff4400; width: 0%; }
+        .bar-label { position: absolute; width: 100%; text-align: center; font-size: 10px; font-weight: bold; color: white; top: -1px; text-shadow: 1px 1px #000; }
+
+        #msg { color: #f55; font-weight: bold; height: 20px; text-shadow: 0 0 5px #000; font-size: 20px; }
+        .flight-btn { background: #d00; color: white; border: 3px solid white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 10px; pointer-events: auto; cursor: pointer; display: none; margin: 5px; }
 
         #flight-controls { position: absolute; bottom: 40px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 200; }
         .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; cursor: pointer; outline: none; }
@@ -52,7 +56,17 @@
     <div id="flight-ui">
         <div class="meter" id="alt-meter">ALTITUDE: 0m</div>
         <div class="meter" id="vel-meter">VELOCITY: 0m/s</div>
-        <div id="heat-ui"><div id="heat-bar"></div></div>
+        
+        <div class="bar-container" id="fuel-ui">
+            <div id="fuel-bar" class="bar-fill"></div>
+            <div class="bar-label">FUEL: <span id="fuel-txt">0</span> gal</div>
+        </div>
+
+        <div class="bar-container" id="heat-ui" style="display:none">
+            <div id="heat-bar" class="bar-fill"></div>
+            <div class="bar-label">HULL HEAT</div>
+        </div>
+
         <div id="msg"></div>
         <button id="decouple-btn" class="flight-btn" onclick="decouple()">DECOUPLE</button>
         <button id="deploy-btn" class="flight-btn" onclick="deployParachute()">DEPLOY PARACHUTE</button>
@@ -70,16 +84,215 @@
     <a-scene id="game-scene" style="display:none" renderer="colorManagement: true;">
         <a-entity light="type: ambient; intensity: 0.3; color: #444;"></a-entity>
         <a-entity light="type: directional; intensity: 2.5; color: #FFFACD;" position="-100 300 -100"></a-entity>
-
         <a-sky id="sky" color="#87CEEB"></a-sky>
         <a-entity id="stars" visible="false"><a-star-system></a-star-system></a-entity>
-        
         <a-sphere position="-100 300 -100" radius="30" color="#FDB813" material="shader: flat; emissive: #FDB813;"></a-sphere>
         <a-entity id="moon-orbit-rig"><a-sphere position="0 600 -200" radius="20" color="#CCC"></a-sphere></a-entity>
-
         <a-circle position="0 -0.1 0" rotation="-90 0 0" radius="2000" color="#1E90FF"></a-circle>
         <a-circle position="0 0.1 0" rotation="-90 0 0" radius="40" color="#228B22"></a-circle>
         <a-cylinder position="0 0.3 0" radius="6" height="0.4" color="#555"></a-cylinder>
 
         <a-entity id="rocket-group" position="0 0.5 0">
             <a-entity id="rocket-body">
+                <a-sphere id="heat-aura" radius="2.5" material="shader: flat; color: #ff4500; opacity: 0" visible="false"></a-sphere>
+                <a-entity id="visual-stack"></a-entity>
+                <a-entity id="fire" position="0 -1.5 0" visible="false">
+                    <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2" material="emissive: #ff4500;"></a-cone>
+                </a-entity>
+            </a-entity>
+        </a-entity>
+        <a-camera id="cam" position="0 5 30" look-controls="enabled: false"></a-camera>
+    </a-scene>
+
+    <script>
+        const PART_PAGES = [
+            [
+                {name: 'Capsule', cost: 200, type: 'capsule', color: '#DDDDDD', h: 2},
+                {name: 'Parachute', cost: 150, type: 'parachute', color: '#ff0000', h: 0.8},
+                {name: 'Fuel Tank', cost: 300, type: 'tank', color: '#ff9900', h: 3}
+            ],
+            [
+                {name: 'Booster', cost: 400, type: 'booster', color: '#333333', h: 2.5},
+                {name: 'Heat Shield', cost: 200, type: 'shield', color: '#ff6600', h: 0.3},
+                {name: 'Decoupler', cost: 100, type: 'decoupler', color: '#222222', h: 0.4}
+            ]
+        ];
+
+        let stack = [], cash = 10000, currentPage = 0;
+        let isThrusting = false, isLeft = false, isRight = false, paraDeployed = false;
+        let vY = 0, vX = 0, posX = 0, posY = 0.5, rotation = 0;
+        let moonAngle = 0, heatLevel = 0, currentFuel = 0, maxFuel = 0;
+        let hasEngine = false, hasChute = false;
+
+        function renderParts() {
+            const grid = document.getElementById('parts-grid'); grid.innerHTML = "";
+            PART_PAGES[currentPage].forEach(p => {
+                const btn = document.createElement('button'); btn.className = 'part-btn';
+                btn.innerHTML = p.name.toUpperCase() + "<br>($" + p.cost + ")";
+                btn.onclick = () => addPart(p); grid.appendChild(btn);
+            });
+        }
+        function scrollParts(dir) { currentPage = (currentPage + dir + PART_PAGES.length) % PART_PAGES.length; renderParts(); }
+
+        function addPart(p) {
+            if (cash < p.cost) return;
+            cash -= p.cost;
+            const el = document.createElement('div'); el.className = 'placed-part';
+            el.style.height = (p.h * 20) + 'px'; el.innerText = p.name.toUpperCase();
+            document.getElementById('rocket-container').appendChild(el);
+            document.getElementById('cash').innerText = cash;
+            stack.push({...p, id: 'p' + Math.random().toString(36).substr(2, 9)});
+            checkSystems();
+        }
+
+        function undo() {
+            if (stack.length === 0) return;
+            stack.pop(); document.getElementById('rocket-container').lastChild.remove();
+            checkSystems();
+        }
+
+        function checkSystems() {
+            hasChute = stack.some(p => p.type === 'parachute');
+            hasEngine = stack.some(p => p.type === 'booster');
+            maxFuel = stack.filter(p => p.type === 'tank').length * 50;
+            currentFuel = maxFuel; // Fill tanks in build mode
+        }
+
+        function decouple() {
+            const idx = stack.findIndex(p => p.type === 'decoupler');
+            if (idx !== -1) {
+                stack.splice(0, idx + 1);
+                buildRocketVisuals();
+                checkSystems();
+                // Recalculate fuel based on remaining tanks
+                currentFuel = Math.min(currentFuel, maxFuel);
+                document.getElementById('msg').innerText = "STAGING SUCCESSFUL!";
+                setTimeout(() => document.getElementById('msg').innerText = "", 2000);
+            }
+        }
+
+        function buildRocketVisuals() {
+            const v = document.getElementById('visual-stack'); v.innerHTML = "";
+            let currentH = 0;
+            stack.forEach(p => {
+                const container = document.createElement('a-entity');
+                container.setAttribute('position', '0 ' + (currentH + (p.h/2)) + ' 0');
+                container.setAttribute('id', p.id);
+                let shape = (p.type==='capsule'||p.type==='parachute'||p.type==='booster') ? 'a-cone' : 'a-cylinder';
+                const mesh = document.createElement(shape);
+                mesh.setAttribute('height', p.h); mesh.setAttribute('color', p.color);
+                mesh.setAttribute('radius-bottom', p.type==='booster'?1.2:1);
+                mesh.setAttribute('radius-top', (p.type==='capsule'||p.type==='parachute')?0:1);
+                container.appendChild(mesh);
+                currentH += p.h; v.appendChild(container);
+            });
+        }
+
+        function goToLaunchpad() {
+            if (stack.length === 0) return;
+            document.getElementById('build-screen').style.display = 'none';
+            document.getElementById('game-scene').style.display = 'block';
+            document.getElementById('flight-controls').style.display = 'flex';
+            document.getElementById('flight-ui').style.display = 'flex';
+            buildRocketVisuals(); physics();
+        }
+
+        function toggleThrust(el) {
+            if (el.checked && currentFuel <= 0) { document.getElementById('msg').innerText = "OUT OF FUEL!"; el.checked = false; return; }
+            if (el.checked && !hasEngine) { document.getElementById('msg').innerText = "NO ENGINE!"; el.checked = false; return; }
+            isThrusting = el.checked;
+        }
+
+        function deployParachute() {
+            if (!hasChute) return;
+            paraDeployed = !paraDeployed;
+            const p = stack.find(x => x.type === 'parachute');
+            const el = document.getElementById(p.id);
+            if (paraDeployed) {
+                el.setAttribute('scale', '5 5 5'); el.firstChild.setAttribute('color', '#ffaaaa');
+            } else {
+                el.setAttribute('scale', '1 1 1'); el.firstChild.setAttribute('color', '#ff0000');
+            }
+        }
+
+        function physics() {
+            if (isLeft) rotation += 1.5; if (isRight) rotation -= 1.5;
+            document.getElementById('rocket-body').setAttribute('rotation', '0 0 ' + rotation);
+
+            let rad = rotation * (Math.PI / 180);
+            let inWater = (Math.abs(posX) > 40 && posY <= 0);
+
+            // --- FUEL LOGIC ---
+            if (isThrusting && currentFuel > 0 && hasEngine && !inWater) {
+                currentFuel -= 0.15; // Fuel burn rate
+                vX += Math.sin(-rad) * 0.007; vY += Math.cos(rad) * 0.007;
+                document.getElementById('fire').setAttribute('visible', true);
+            } else {
+                if (isThrusting && currentFuel <= 0) {
+                    isThrusting = false;
+                    document.getElementById('t-switch').checked = false;
+                    document.getElementById('msg').innerText = "FUEL DEPLETED!";
+                }
+                document.getElementById('fire').setAttribute('visible', false);
+            }
+
+            // UI Bars
+            document.getElementById('fuel-bar').style.width = maxFuel > 0 ? (currentFuel / maxFuel * 100) + "%" : "0%";
+            document.getElementById('fuel-txt').innerText = Math.max(0, Math.round(currentFuel));
+
+            // --- HEAT LOGIC ---
+            const aura = document.getElementById('heat-aura');
+            if (posY < 150 && posY > 40 && vY < -0.3) {
+                document.getElementById('heat-ui').style.display = 'block';
+                let intensity = Math.abs(vY) * 2;
+                let hasShield = (stack.length > 0 && stack[0].type === 'shield');
+                heatLevel += hasShield ? intensity * 0.1 : intensity * 1.5;
+                aura.setAttribute('visible', true); aura.setAttribute('material', 'opacity', intensity/2);
+                if (heatLevel >= 100) {
+                    const lost = stack.shift(); heatLevel = 50; buildRocketVisuals(); checkSystems();
+                    if(lost.type === 'capsule') { alert("RE-ENTRY FAILURE"); location.reload(); }
+                }
+            } else {
+                heatLevel = Math.max(0, heatLevel - 0.5);
+                if(heatLevel === 0) document.getElementById('heat-ui').style.display = 'none';
+                aura.setAttribute('visible', false);
+            }
+            document.getElementById('heat-bar').style.width = heatLevel + "%";
+
+            // Physics basic
+            if (inWater) { vY += 0.005; vY *= 0.9; vX *= 0.9; if (posY > 0) vY -= 0.006; } 
+            else { vY -= 0.0025; if (paraDeployed && vY < 0) vY *= 0.8; vX *= 0.99; }
+            posX += vX; posY += vY;
+            let vel = Math.sqrt(vX*vX + vY*vY) * 1000;
+
+            if (posY <= (Math.abs(posX)>40?-2:0.5)) {
+                if (vel > (Math.abs(posX)>40?60:80) && stack.length > 0) {
+                    const d = stack.shift(); checkSystems(); buildRocketVisuals();
+                    if(d.type==='capsule') { alert("CRASHED!"); location.reload(); }
+                    posY += 1; vY = Math.abs(vY)*0.3;
+                } else { posY = (Math.abs(posX)>40?-2:0.5); if(!inWater){vX=0;vY=0;} }
+            }
+
+            document.getElementById('rocket-group').setAttribute('position', posX + ' ' + posY + ' 0');
+            document.getElementById('cam').setAttribute('position', posX + ' ' + (posY + 5) + ' 30');
+            document.getElementById('alt-meter').innerText = "ALTITUDE: " + Math.round(posY * 100) + "m";
+            document.getElementById('vel-meter').innerText = "VELOCITY: " + Math.round(vel) + "m/s";
+            document.getElementById('deploy-btn').style.display = (hasChute && posY > 2) ? 'block' : 'none';
+            document.getElementById('decouple-btn').style.display = stack.some(p=>p.type==='decoupler') ? 'block' : 'none';
+
+            moonAngle += 0.05; document.getElementById('moon-orbit-rig').setAttribute('rotation', '0 0 ' + moonAngle);
+            requestAnimationFrame(physics);
+        }
+
+        AFRAME.registerComponent('star-system', {
+            init: function () {
+                const geom = new THREE.BufferGeometry(); const verts = [];
+                for (let i = 0; i < 2000; i++) verts.push(THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000), THREE.MathUtils.randFloatSpread(1000));
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+                this.el.setObject3D('mesh', new THREE.Points(geom, new THREE.PointsMaterial({color: 0xFFFFFF, size: 0.5})));
+            }
+        });
+        window.onload = renderParts;
+    </script>
+</body>
+</html>
