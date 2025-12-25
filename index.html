@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Builder: Fixed Orbits & Fuel</title>
+    <title>Space Builder: Heat Shields & Chutes</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; background: #000; color: white; touch-action: none; }
@@ -9,8 +9,8 @@
         #blueprint-area { flex-grow: 1; position: relative; background: radial-gradient(#1a1a1a 1px, transparent 1px) 0 0/25px 25px; border-bottom: 2px solid #0f0; cursor: grab; }
         #menu-container { height: 40%; display: flex; flex-direction: column; background: #111; border-top: 2px solid #0f0; }
         .top-launch-btn { background: #00ff00; color: #000; padding: 12px; font-weight: bold; cursor: pointer; border: none; font-size: 18px; }
-        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; align-content: center; }
-        .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 11px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 40px; }
+        #parts-grid { flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; padding: 10px; overflow-y: auto; }
+        .part-btn { background: #16213e; color: white; border: 2px solid #00ff00; font-size: 10px; font-weight: bold; border-radius: 8px; cursor: pointer; min-height: 45px; }
 
         #flight-ui { position: absolute; top: 20px; width: 100%; display: none; flex-direction: column; align-items: center; pointer-events: none; z-index: 300; }
         .meter { background: rgba(0,0,0,0.8); padding: 5px 15px; border: 2px solid #0f0; border-radius: 5px; font-size: 16px; color: #0f0; font-weight: bold; margin-bottom: 5px; width: 220px; text-align: center; }
@@ -18,14 +18,19 @@
         .bar-fill { height: 100%; width: 100%; transition: width 0.1s; background: #00ccff; }
         .bar-label { position: absolute; width: 100%; text-align: center; font-size: 10px; font-weight: bold; color: white; top: -1px; }
 
-        #flight-controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 400; }
-        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 70px; height: 70px; border-radius: 50%; font-size: 30px; pointer-events: auto; }
-        .thrust-switch { appearance: none; width: 55px; height: 90px; background: #444; border: 3px solid #fff; border-radius: 10px; position: relative; pointer-events: auto; }
-        .thrust-switch:checked { background: #ff4500; }
-        .thrust-switch::after { content: ''; position: absolute; top: 5px; left: 5px; width: 39px; height: 39px; background: #eee; border-radius: 5px; transition: 0.2s; }
-        .thrust-switch:checked::after { transform: translateY(40px); }
+        #flight-controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: center; gap: 15px; align-items: center; padding: 0 10px; box-sizing: border-box; z-index: 400; }
+        .move-btn { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; width: 65px; height: 65px; border-radius: 50%; font-size: 30px; pointer-events: auto; }
         
-        .flight-btn { background: #d00; color: white; border: 2px solid white; padding: 8px; font-weight: bold; border-radius: 5px; pointer-events: auto; display: none; }
+        .switch-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .switch-label { font-size: 9px; font-weight: bold; color: #ccc; text-transform: uppercase; }
+        .toggle-switch { appearance: none; width: 45px; height: 70px; border: 3px solid #fff; border-radius: 10px; position: relative; pointer-events: auto; cursor: pointer; }
+        .toggle-switch::after { content: ''; position: absolute; top: 4px; left: 4px; width: 31px; height: 31px; background: #eee; border-radius: 5px; transition: 0.2s; }
+        .toggle-switch:checked::after { transform: translateY(28px); }
+
+        #t-switch { background: #444; } #t-switch:checked { background: #ff4500; }
+        #o-switch { background: #444; } #o-switch:checked { background: #1E90FF; }
+        
+        .action-btn { background: #d00; color: white; border: 2px solid white; padding: 10px; font-weight: bold; border-radius: 5px; pointer-events: auto; font-size: 12px; }
         #msg { color: yellow; font-weight: bold; text-shadow: 2px 2px #000; font-size: 20px; text-align: center; margin-top: 10px; }
     </style>
 </head>
@@ -52,36 +57,43 @@
         <div class="meter" id="vel-meter">VELOCITY: 0m/s</div>
         <div class="bar-container"><div id="fuel-bar" class="bar-fill"></div><div class="bar-label">FUEL: <span id="fuel-txt">0</span> gal</div></div>
         <div id="msg"></div>
-        <button id="decouple-btn" class="flight-btn" onclick="decouple()">DECOUPLE</button>
     </div>
 
     <div id="flight-controls">
         <button class="move-btn" onmousedown="isLeft=true" onmouseup="isLeft=false" ontouchstart="isLeft=true" ontouchend="isLeft=false">◀</button>
-        <input type="checkbox" id="t-switch" class="thrust-switch" onchange="toggleThrust(this)">
+        
+        <div class="switch-group"><label class="switch-label">Orbit</label><input type="checkbox" id="o-switch" class="toggle-switch"></div>
+        <div class="switch-group"><label class="switch-label">Thrust</label><input type="checkbox" id="t-switch" class="toggle-switch" onchange="toggleThrust(this)"></div>
+
         <button class="move-btn" onmousedown="isRight=true" onmouseup="isRight=false" ontouchstart="isRight=true" ontouchend="isRight=false">▶</button>
+        
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <button id="decouple-btn" class="action-btn" onclick="decouple()">SEP</button>
+            <button id="chute-btn" class="action-btn" style="background:orange;" onclick="deployChute()">CHUTE</button>
+        </div>
     </div>
 
     <a-scene id="game-scene" style="display:none">
         <a-sky id="sky" color="#87CEEB"></a-sky>
-        
-        <a-sphere position="0 15000 -500" radius="100" color="#FFFFFF" material="shader:flat; emissive:#FFF;"></a-sphere>
-
+        <a-sphere position="0 15000 -2000" radius="500" color="#FFF" material="emissive:#FFF; shader:flat"></a-sphere>
         <a-entity id="earth-group">
             <a-circle position="0 -0.5 0" rotation="-90 0 0" radius="3000" color="#1E90FF"></a-circle>
             <a-circle position="0 0.01 0" rotation="-90 0 0" radius="50" color="#228B22"></a-circle>
         </a-entity>
-
-        <a-entity id="moon-group" position="4000 6000 0">
-            <a-sphere radius="150" color="#888"></a-sphere>
-            <a-circle rotation="-90 0 0" radius="60" color="#666" position="0 149.5 0"></a-circle>
-        </a-entity>
+        <a-entity id="moon-group" position="4000 6000 0"><a-sphere radius="150" color="#888"></a-sphere></a-entity>
+        <a-entity id="mars-group" position="-5000 10000 0"><a-sphere radius="250" color="#b22222"></a-sphere></a-entity>
 
         <a-entity id="cam-pivot">
             <a-entity id="rocket-group">
                 <a-entity id="rocket-body">
                     <a-entity id="flight-stack"></a-entity>
+                    <a-entity id="chute-vis" position="0 1.5 0" visible="false">
+                        <a-sphere color="white" radius="1.5" scale="1 0.3 1"></a-sphere>
+                        <a-entity line="start: 0 0 0; end: 1 1 0; color: white"></a-entity>
+                        <a-entity line="start: 0 0 0; end: -1 1 0; color: white"></a-entity>
+                    </a-entity>
                     <a-entity id="fire" position="0 -1.5 0" visible="false">
-                        <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2" material="emissive:#ff4500;"></a-cone>
+                        <a-cone color="#ff4500" radius-bottom="0.8" radius-top="0.1" height="2"></a-cone>
                     </a-entity>
                 </a-entity>
             </a-entity>
@@ -91,30 +103,19 @@
 
     <script>
         const PARTS = [
-            {name: 'Capsule', cost: 200, type: 'capsule', color: '#EEE', h: 2},
+            {name: 'Capsule', cost: 200, type: 'capsule', color: '#EEE', h: 1.5},
+            {name: 'Parachute', cost: 150, type: 'chute', color: '#FFF', h: 0.5},
             {name: 'Fuel Tank', cost: 300, type: 'tank', color: '#f90', h: 3},
-            {name: 'Booster', cost: 400, type: 'booster', color: '#333', h: 2},
-            {name: 'Decoupler', cost: 100, type: 'decoupler', color: '#222', h: 0.4}
+            {name: 'Booster', cost: 400, type: 'booster', color: '#333', h: 1.5},
+            {name: 'Decoupler', cost: 100, type: 'decoupler', color: '#222', h: 0.3},
+            {name: 'Heat Shield', cost: 200, type: 'shield', color: '#444', h: 0.3}
         ];
 
         let stack = [], cash = 10000, isFlying = false;
         let isDragging = false, lastX = 0, lastY = 0, orbitY = 0, orbitX = 0;
         let isThrusting = false, isLeft = false, isRight = false;
         let vY = 0, vX = 0, posX = 0, posY = 0.5, rotation = 0;
-        let currentFuel = 0, maxFuel = 0, hasEngine = false;
-
-        function startDrag(e) { isDragging = true; lastX = e.pageX || (e.touches ? e.touches[0].pageX : 0); lastY = e.pageY || (e.touches ? e.touches[0].pageY : 0); }
-        function stopDrag() { isDragging = false; }
-        function doDrag(e) {
-            if (!isDragging) return;
-            let x = e.pageX || (e.touches ? e.touches[0].pageX : 0);
-            let y = e.pageY || (e.touches ? e.touches[0].pageY : 0);
-            orbitY += (x - lastX) * 0.5;
-            orbitX = Math.max(-40, Math.min(40, orbitX - (y - lastY) * 0.5));
-            if (!isFlying) document.getElementById('build-rig').setAttribute('rotation', `0 ${orbitY} 0`);
-            else document.getElementById('cam-pivot').setAttribute('rotation', `${orbitX} ${orbitY} 0`);
-            lastX = x; lastY = y;
-        }
+        let currentFuel = 0, maxFuel = 0, hasEngine = false, chuteDeployed = false;
 
         function renderParts() {
             const grid = document.getElementById('parts-grid');
@@ -126,7 +127,16 @@
             });
         }
 
-        function undo() { if(stack.length > 0) { let p = stack.pop(); cash += p.cost; updateStacks(); } }
+        function startDrag(e) { isDragging = true; lastX = e.pageX || (e.touches ? e.touches[0].pageX : 0); lastY = e.pageY || (e.touches ? e.touches[0].pageY : 0); }
+        function stopDrag() { isDragging = false; }
+        function doDrag(e) {
+            if (!isDragging) return;
+            let x = e.pageX || (e.touches ? e.touches[0].pageX : 0), y = e.pageY || (e.touches ? e.touches[0].pageY : 0);
+            orbitY += (x - lastX) * 0.5; orbitX = Math.max(-40, Math.min(40, orbitX - (y - lastY) * 0.5));
+            if (!isFlying) document.getElementById('build-rig').setAttribute('rotation', `0 ${orbitY} 0`);
+            else document.getElementById('cam-pivot').setAttribute('rotation', `${orbitX} ${orbitY} 0`);
+            lastX = x; lastY = y;
+        }
 
         function updateStacks() {
             document.getElementById('cash').innerText = cash;
@@ -142,11 +152,13 @@
             stack.forEach(p => {
                 const container = document.createElement('a-entity');
                 container.setAttribute('position', `0 ${currentH + (p.h/2)} 0`);
-                let shape = (p.type==='capsule'||p.type==='booster') ? 'a-cone' : 'a-cylinder';
+                let shape = 'a-cylinder';
+                if(p.type==='capsule') shape = 'a-cone';
+                if(p.type==='chute') shape = 'a-box';
                 const mesh = document.createElement(shape);
                 mesh.setAttribute('height', p.h); mesh.setAttribute('color', p.color);
-                mesh.setAttribute('radius-bottom', p.type==='booster'?1.2:1);
-                mesh.setAttribute('radius-top', p.type==='capsule'?0:1);
+                mesh.setAttribute('radius', 1);
+                if(p.type==='shield') mesh.setAttribute('radius', 1.2);
                 container.appendChild(mesh);
                 currentH += p.h; v.appendChild(container);
             });
@@ -163,11 +175,8 @@
         }
 
         function toggleThrust(el) { if (el.checked && (currentFuel <= 0 || !hasEngine)) { el.checked = false; return; } isThrusting = el.checked; }
-
-        function decouple() {
-            const idx = stack.findIndex(p => p.type === 'decoupler');
-            if (idx !== -1) { stack.splice(0, idx + 1); buildVisuals('flight-stack'); updateStacks(); }
-        }
+        function decouple() { const idx = stack.findIndex(p => p.type === 'decoupler'); if (idx !== -1) { stack.splice(0, idx + 1); buildVisuals('flight-stack'); updateStacks(); } }
+        function deployChute() { if(stack.some(p => p.type === 'chute')) { chuteDeployed = true; document.getElementById('chute-vis').setAttribute('visible', true); } }
 
         function physics() {
             if (isLeft) rotation += 1.5; if (isRight) rotation -= 1.5;
@@ -176,21 +185,23 @@
             
             if (isThrusting && currentFuel > 0 && hasEngine) {
                 currentFuel -= 0.12;
-                vX += Math.sin(-rad) * 0.008; 
-                vY += Math.cos(rad) * 0.008;
+                vX += Math.sin(-rad) * 0.008; vY += Math.cos(rad) * 0.008;
                 document.getElementById('fire').setAttribute('visible', true);
-            } else {
-                if (isThrusting) { isThrusting = false; document.getElementById('t-switch').checked = false; }
-                document.getElementById('fire').setAttribute('visible', false);
+            } else { document.getElementById('fire').setAttribute('visible', false); }
+
+            let orbitActive = document.getElementById('o-switch').checked;
+            if (!orbitActive) {
+                vY -= 0.0025; // Earth Gravity
+                if(chuteDeployed && vY < -0.01) vY = -0.01; // Chute drag
             }
 
-            vY -= 0.0025; // Earth Gravity
             posX += vX; posY += vY;
+            if (posY <= 0.5) { posY = 0.5; vX = 0; vY = 0; chuteDeployed = false; document.getElementById('chute-vis').setAttribute('visible', false); }
 
-            if (posY <= 0.5) { posY = 0.5; vX = 0; vY = 0; }
-
+            let skyHex = posY > 1000 ? "#000" : "#87CEEB";
+            document.getElementById('sky').setAttribute('color', skyHex);
             document.getElementById('cam-pivot').setAttribute('position', `${posX} ${posY} 0`);
-            document.getElementById('fuel-bar').style.width = maxFuel > 0 ? (currentFuel / maxFuel * 100) + "%" : "0%";
+            document.getElementById('fuel-bar').style.width = (currentFuel / maxFuel * 100) + "%";
             document.getElementById('fuel-txt').innerText = Math.round(currentFuel);
             document.getElementById('alt-meter').innerText = `ALTITUDE: ${Math.round(posY*100)}m`;
             document.getElementById('vel-meter').innerText = `VELOCITY: ${Math.round(Math.sqrt(vX*vX+vY*vY)*1000)}m/s`;
